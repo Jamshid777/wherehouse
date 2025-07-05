@@ -38,7 +38,7 @@ const initialStock: Stock[] = [
 const initialGoodsReceipts: GoodsReceiptNote[] = [
     { id: 'grn1', doc_number: 'K-0001', supplier_id: 's1', warehouse_id: 'w1', date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p1', quantity: 100, price: 5000, batch_number: '1-1', expiry_date: new Date(2025, 5, 1).toISOString()}], paid_amount: 500000 },
     { id: 'grn2', doc_number: 'K-0002', supplier_id: 's2', warehouse_id: 'w1', date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p2', quantity: 200, price: 11500, batch_number: '1-1', expiry_date: new Date(2025, 11, 1).toISOString()}], paid_amount: 1000000 },
-    { id: 'grn3', doc_number: 'K-0003', supplier_id: 's1', warehouse_id: 'w2', date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.DRAFT, items: [{productId: 'p5', quantity: 1000, price: 1400, batch_number: '1-1', expiry_date: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString()}], paid_amount: 0 },
+    { id: 'grn3', doc_number: 'K-0003', supplier_id: 's1', warehouse_id: 'w2', date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p5', quantity: 1000, price: 1400, batch_number: '1-1', expiry_date: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString()}], paid_amount: 0 },
 ]
 
 export const useMockData = () => {
@@ -521,6 +521,44 @@ export const useMockData = () => {
       );
   }
 
+    const addDirectPaymentForNote = (noteId: string, paymentMethod: PaymentMethod, comment: string) => {
+        const note = goodsReceipts.find(n => n.id === noteId);
+        if (!note || note.status !== DocumentStatus.CONFIRMED) {
+          alert("Faqat tasdiqlangan hujjatlar uchun to'lov qilish mumkin.");
+          return;
+        }
+        
+        const total = getNoteTotal(note.items);
+        const dueAmount = total - note.paid_amount;
+        
+        if (dueAmount <= 0.01) { // use a small epsilon for float comparison
+          alert("Bu hujjat uchun qarz mavjud emas.");
+          return;
+        }
+        
+        const newPayment: Payment = {
+          id: `pay${Date.now()}`,
+          doc_number: `P-${(payments.length + 1).toString().padStart(4, '0')}`,
+          date: new Date().toISOString(),
+          supplier_id: note.supplier_id,
+          amount: dueAmount,
+          payment_method: paymentMethod,
+          links: [{ grnId: noteId, amountApplied: dueAmount }],
+          comment: comment || `"${note.doc_number}" hujjat uchun to'lov`,
+        };
+    
+        setPayments(prev => [newPayment, ...prev]);
+    
+        setGoodsReceipts(prevReceipts => 
+          prevReceipts.map(r => {
+            if (r.id === noteId) {
+              return { ...r, paid_amount: r.paid_amount + dueAmount };
+            }
+            return r;
+          })
+        );
+      };
+
   const generateNextBatchNumber = (productId: string) => {
     if (!productId) return '';
 
@@ -555,7 +593,7 @@ export const useMockData = () => {
     writeOffs, addWriteOff, confirmWriteOff,
     internalTransfers, addInternalTransfer, confirmInternalTransfer,
     inventoryNotes, addInventoryNote, confirmInventoryNote,
-    payments, addPayment,
+    payments, addPayment, addDirectPaymentForNote,
     getSupplierBalance,
     checkCreditLimit,
     generateNextBatchNumber,

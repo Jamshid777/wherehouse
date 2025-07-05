@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { GoodsReceiptNote, GoodsReceiptItem, DocumentStatus, PaymentStatus, Product, Supplier } from '../types';
+import { GoodsReceiptNote, GoodsReceiptItem, DocumentStatus, PaymentStatus, Product, Supplier, PaymentMethod } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
 import { Modal } from './Modal';
 import { PlusIcon } from './icons/PlusIcon';
@@ -10,6 +10,7 @@ import { ChevronDownIcon } from './icons/ChevronDownIcon';
 import { WarningIcon } from './icons/WarningIcon';
 import { ProductFormModal } from './forms/ProductFormModal';
 import { SupplierFormModal } from './forms/SupplierFormModal';
+import { CashIcon } from './icons/CashIcon';
 
 
 interface GoodsReceiptsViewProps {
@@ -36,7 +37,7 @@ const getPaymentStatus = (note: GoodsReceiptNote, total: number): { status: Paym
 
 
 export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManager, newDocumentPayload, clearPayload }) => {
-  const { goodsReceipts, suppliers, warehouses, products, addGoodsReceipt, updateGoodsReceipt, deleteGoodsReceipt, confirmGoodsReceipt, getNoteTotal, checkCreditLimit } = dataManager;
+  const { goodsReceipts, suppliers, warehouses, products, addGoodsReceipt, updateGoodsReceipt, deleteGoodsReceipt, confirmGoodsReceipt, getNoteTotal, checkCreditLimit, addDirectPaymentForNote } = dataManager;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<GoodsReceiptNote | null>(null);
   const [productForNewNote, setProductForNewNote] = useState<Product | null>(null);
@@ -121,6 +122,19 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
           deleteGoodsReceipt(id);
       }
   }
+
+  const handleExtinguishDebt = (note: GoodsReceiptNote) => {
+    const total = getNoteTotal(note.items);
+    const dueAmount = total - note.paid_amount;
+    
+    if (window.confirm(`Siz haqiqatan ham "${note.doc_number}" hujjat uchun ${formatCurrency(dueAmount)} so'm miqdoridagi qarzni naqd pulda so'ndirmoqchimisiz?`)) {
+        try {
+            addDirectPaymentForNote(note.id, PaymentMethod.CASH, `"${note.doc_number}" hujjat uchun avtomatik to'lov.`);
+        } catch (error: any) {
+            alert(`Xatolik: ${error.message}`);
+        }
+    }
+  };
   
   const handleToggleExpand = (id: string) => {
       setExpandedRows(prev => {
@@ -202,10 +216,19 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
                           <span className={`px-2 py-1 text-xs font-medium rounded-full ${paymentStatus.className}`}>
                             {paymentStatus.text}
                           </span>
+                          {note.status === DocumentStatus.CONFIRMED && (paymentStatus.status === PaymentStatus.UNPAID || paymentStatus.status === PaymentStatus.PARTIALLY_PAID) && (
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); handleExtinguishDebt(note); }} 
+                                title="Qarzni to'lash"
+                                className="p-1 rounded-full text-green-600 hover:bg-green-100 transition-colors"
+                            >
+                                <CashIcon className="h-5 w-5"/>
+                            </button>
+                           )}
                           <div className="relative group">
                             <span className="text-slate-400 cursor-help text-xs font-bold border border-slate-400 rounded-full w-4 h-4 flex items-center justify-center">?</span>
                             <div className="absolute bottom-full z-10 mb-2 -left-1/2 w-64 p-2 bg-slate-700 text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                              To'lovlar 'Hujjatlar {'>'} To'lovlar' bo'limida amalga oshiriladi va avtomatik ravishda eng eski qarzdorlikka yopiladi (FIFO).
+                              Umumiy to'lovlar 'Hujjatlar &gt; To'lovlar' bo'limida amalga oshiriladi. Bu tugma faqat shu hujjat qarzini to'liq yopish uchun mo'ljallangan.
                             </div>
                           </div>
                       </div>

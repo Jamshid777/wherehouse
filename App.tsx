@@ -53,34 +53,53 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-slate-100 font-sans text-slate-800">
-      <aside className="w-64 flex-shrink-0 bg-white border-r border-slate-200 flex flex-col">
-        <div className="h-16 flex items-center justify-center border-b border-slate-200">
-          <h1 className="text-xl font-bold text-slate-700">Ombor Nazorati</h1>
-        </div>
-        <nav className="flex-1 p-4">
-          <ul className="space-y-2">
-            {navigationItems.map(item => (
-              <li key={item.id}>
+    <div className="flex flex-col h-screen bg-slate-100 font-sans text-slate-800">
+      <header className="flex-shrink-0 bg-white border-b border-slate-200 shadow-sm z-10">
+        <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center">
+            <h1 className="text-xl font-bold text-slate-700">Ombor Nazorati</h1>
+          </div>
+          
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center h-full">
+            <div className="flex items-baseline space-x-1">
+                {navigationItems.map(item => (
                 <button
-                  onClick={() => handleNavigation(item.id as View)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    key={item.id}
+                    onClick={() => handleNavigation(item.id as View)}
+                    className={`h-16 flex items-center gap-2 px-4 text-sm font-medium transition-colors border-b-2 ${
                     activeView === item.id
-                      ? 'bg-blue-500 text-white shadow'
-                      : 'text-slate-600 hover:bg-slate-100'
-                  }`}
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-slate-500 hover:text-blue-600 hover:border-blue-300'
+                    }`}
                 >
-                  {item.icon}
-                  <span>{item.label}</span>
+                    {item.icon}
+                    <span>{item.label}</span>
                 </button>
-              </li>
+                ))}
+            </div>
+          </nav>
+
+          {/* Mobile Navigation */}
+           <nav className="flex md:hidden items-center">
+            {navigationItems.map(item => (
+              <button
+                key={item.id}
+                onClick={() => handleNavigation(item.id as View)}
+                title={item.label}
+                aria-label={item.label}
+                className={`h-12 w-12 flex items-center justify-center rounded-lg transition-colors ${
+                  activeView === item.id
+                    ? 'bg-blue-500 text-white'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {React.cloneElement(item.icon, { className: "h-6 w-6" })}
+              </button>
             ))}
-          </ul>
-        </nav>
-        <div className="p-4 border-t border-slate-200">
-            <p className="text-xs text-slate-400 text-center">© 2024 Omborxona tizimi</p>
+          </nav>
         </div>
-      </aside>
+      </header>
 
       <main className="flex-1 overflow-y-auto">
         <div className="p-6 lg:p-8">

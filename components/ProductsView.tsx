@@ -1,19 +1,19 @@
 
 import React, { useState, useMemo } from 'react';
-import { Product, Unit } from '../types';
+import { Product, Unit, DocumentStatus } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
 import { Modal } from './Modal';
 import { PlusIcon } from './icons/PlusIcon';
-import { EditIcon } from './icons/EditIcon';
-import { TrashIcon } from './icons/TrashIcon';
 import { SearchIcon } from './icons/SearchIcon';
 
 interface ProductsViewProps {
   dataManager: UseMockDataReturnType;
 }
 
+const formatCurrency = (amount: number) => new Intl.NumberFormat('uz-UZ').format(amount);
+
 export const ProductsView: React.FC<ProductsViewProps> = ({ dataManager }) => {
-  const { products, addProduct, updateProduct, deleteProduct } = dataManager;
+  const { products, addProduct, updateProduct, deleteProduct, goodsReceipts, suppliers } = dataManager;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,8 +23,40 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ dataManager }) => {
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.category.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    ).sort((a,b) => a.name.localeCompare(b.name));
   }, [products, searchTerm]);
+
+  const supplierPricesByProduct = useMemo(() => {
+    const productPricesCache = new Map<string, Map<string, { price: number }>>();
+
+    const confirmedReceipts = goodsReceipts
+        .filter(note => note.status === DocumentStatus.CONFIRMED && note.supplier_id !== 'SYSTEM')
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    for (const note of confirmedReceipts) {
+        for (const item of note.items) {
+            if (!productPricesCache.has(item.productId)) {
+                productPricesCache.set(item.productId, new Map());
+            }
+            const supplierPrices = productPricesCache.get(item.productId)!;
+            // Since we sorted by date ascending, we just overwrite to get the latest.
+            supplierPrices.set(note.supplier_id, { price: item.price });
+        }
+    }
+
+    const formattedPrices = new Map<string, string>();
+    for (const [productId, pricesMap] of productPricesCache.entries()) {
+        const priceEntries = Array.from(pricesMap.entries()).map(([supplierId, priceInfo]) => {
+            const supplier = suppliers.find(s => s.id === supplierId);
+            return {
+                name: supplier?.name || 'Noma\'lum',
+                price: priceInfo.price,
+            };
+        });
+        formattedPrices.set(productId, priceEntries.map(entry => `${entry.name} (${formatCurrency(entry.price)} so'm)`).join(', '));
+    }
+    return formattedPrices;
+  }, [goodsReceipts, suppliers]);
 
   const handleOpenModal = (product: Product | null = null) => {
     setEditingProduct(product);
@@ -80,33 +112,41 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ dataManager }) => {
         <table className="w-full text-sm text-left">
           <thead className="text-xs text-slate-500 uppercase bg-slate-50 tracking-wider">
             <tr>
+              <th scope="col" className="px-6 py-3">T/r</th>
               <th scope="col" className="px-6 py-3">Nomi</th>
-              <th scope="col" className="px-6 py-3">SKU</th>
-              <th scope="col" className="px-6 py-3">Kategoriya</th>
               <th scope="col" className="px-6 py-3">O'lchov birligi</th>
+              <th scope="col" className="px-6 py-3">Guruhi</th>
               <th scope="col" className="px-6 py-3 text-right">Minimal zaxira</th>
+              <th scope="col" className="px-6 py-3" style={{minWidth: '300px'}}>Yetkazib beruvchilar (Narxi)</th>
               <th scope="col" className="px-6 py-3 text-center">Amallar</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {filteredProducts.map(product => (
+            {filteredProducts.map((product, index) => (
               <tr key={product.id} className="hover:bg-slate-50">
+                <td className="px-6 py-4 text-slate-600">{index + 1}</td>
                 <td className="px-6 py-4 font-medium text-slate-900 whitespace-nowrap">{product.name}</td>
-                <td className="px-6 py-4 text-slate-600">{product.sku}</td>
-                <td className="px-6 py-4 text-slate-600">{product.category}</td>
                 <td className="px-6 py-4 text-slate-600">{product.unit}</td>
+                <td className="px-6 py-4 text-slate-600">{product.category}</td>
                 <td className="px-6 py-4 text-slate-600 text-right font-mono">{product.min_stock}</td>
+                <td className="px-6 py-4 text-slate-600">
+                    {supplierPricesByProduct.get(product.id) || <span className="text-slate-400">Ma'lumot yo'q</span>}
+                </td>
                 <td className="px-6 py-4 text-center">
-                  <div className="flex justify-center items-center gap-2">
-                    <button onClick={() => handleOpenModal(product)} className="p-2 rounded-full text-blue-600 hover:bg-blue-50 transition-colors"><EditIcon className="h-5 w-5"/></button>
-                    <button onClick={() => handleDelete(product.id)} className="p-2 rounded-full text-red-600 hover:bg-red-50 transition-colors"><TrashIcon className="h-5 w-5"/></button>
+                  <div className="flex justify-center items-center gap-4">
+                    <button onClick={(e) => { e.stopPropagation(); handleOpenModal(product); }} title="Tahrirlash" className="transition-transform hover:scale-125">
+                        <span role="img" aria-label="Tahrirlash">✏️</span>
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); handleDelete(product.id); }} title="O'chirish" className="transition-transform hover:scale-125">
+                        <span role="img" aria-label="O'chirish">❌</span>
+                    </button>
                   </div>
                 </td>
               </tr>
             ))}
              {filteredProducts.length === 0 && (
                 <tr>
-                    <td colSpan={6} className="text-center py-10 text-slate-500">
+                    <td colSpan={7} className="text-center py-10 text-slate-500">
                         Mahsulotlar topilmadi.
                     </td>
                 </tr>

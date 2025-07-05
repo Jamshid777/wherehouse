@@ -129,15 +129,15 @@ export const BalanceSheetReport: React.FC<BalanceSheetReportProps> = ({ dataMana
             {!isLoading && reportData && (
                 <div className="space-y-4">
                     <div className="overflow-x-auto border rounded-lg">
-                        <table className="w-full text-sm">
+                        <table className="w-full text-sm border-collapse">
                             <thead className="text-xs text-slate-500 uppercase bg-slate-50 tracking-wider">
                                 <tr>
-                                    <th className="px-4 py-3 text-left font-medium w-[5%]"></th>
-                                    <th className="px-4 py-3 text-left font-medium">Mahsulot / Ombor</th>
-                                    <th className="px-4 py-3 text-left font-medium">Kategoriya</th>
-                                    <th className="px-4 py-3 text-right font-medium">Miqdor</th>
-                                    <th className="px-4 py-3 text-right font-medium">Tannarx (O'rtacha)</th>
-                                    <th className="px-4 py-3 text-right font-medium">Jami Summa</th>
+                                    <th className="px-4 py-3 text-left font-medium w-[5%] border-r border-slate-200"></th>
+                                    <th className="px-4 py-3 text-left font-medium border-r border-slate-200">Mahsulot / Ombor</th>
+                                    <th className="px-4 py-3 text-left font-medium border-r border-slate-200">Kategoriya</th>
+                                    <th className="px-4 py-3 text-right font-medium border-r border-slate-200">Miqdor</th>
+                                    <th className="px-4 py-3 text-right font-medium border-r border-slate-200">Tannarx (O'rtacha)</th>
+                                    <th className="px-4 py-3 text-right font-medium border-r border-slate-200">Jami Summa</th>
                                     <th className="px-4 py-3 text-center font-medium"></th>
                                 </tr>
                             </thead>
@@ -152,19 +152,19 @@ export const BalanceSheetReport: React.FC<BalanceSheetReportProps> = ({ dataMana
                                     return (
                                         <React.Fragment key={key}>
                                             <tr onClick={() => handleToggleExpand(key)} className="cursor-pointer hover:bg-slate-50" title="Batafsil ko'rish uchun bosing">
-                                                <td className="px-4 py-3 text-center">
+                                                <td className="px-4 py-3 text-center border-r border-slate-200">
                                                     <ChevronDownIcon className={`h-5 w-5 text-slate-400 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
                                                 </td>
-                                                <td className="px-4 py-3 font-medium text-slate-900">
+                                                <td className="px-4 py-3 font-medium text-slate-900 border-r border-slate-200">
                                                     <div>
                                                         {product.name}
                                                         <span className="ml-2 text-xs text-slate-500 font-normal">({warehouse.name})</span>
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-3 text-slate-600">{product.category}</td>
-                                                <td className="px-4 py-3 text-right font-mono font-semibold text-slate-800">{totalQty.toFixed(2)} <span className="text-xs text-slate-500">{product.unit}</span></td>
-                                                <td className="px-4 py-3 text-right font-mono text-slate-600">{formatCurrency(avgCost)}</td>
-                                                <td className="px-4 py-3 text-right font-mono font-bold text-slate-800">{formatCurrency(totalValue)}</td>
+                                                <td className="px-4 py-3 text-slate-600 border-r border-slate-200">{product.category}</td>
+                                                <td className="px-4 py-3 text-right font-mono font-semibold text-slate-800 border-r border-slate-200">{totalQty.toFixed(2)} <span className="text-xs text-slate-500">{product.unit}</span></td>
+                                                <td className="px-4 py-3 text-right font-mono text-slate-600 border-r border-slate-200">{formatCurrency(avgCost)}</td>
+                                                <td className="px-4 py-3 text-right font-mono font-bold text-slate-800 border-r border-slate-200">{formatCurrency(totalValue)}</td>
                                                 <td className="px-4 py-3 text-center">
                                                     <button onClick={(e) => { e.stopPropagation(); handleQuickReceipt(product); }} title="Tezkor kirim" className="p-1.5 rounded-full text-blue-600 hover:bg-blue-100 transition-colors">
                                                         <PlusIcon className="h-5 w-5" />
@@ -175,23 +175,23 @@ export const BalanceSheetReport: React.FC<BalanceSheetReportProps> = ({ dataMana
                                                 <tr>
                                                     <td colSpan={7} className="p-0">
                                                         <div className="bg-slate-50/70 px-4 py-2">
-                                                            <table className="w-full text-xs">
+                                                            <table className="w-full text-xs border-collapse">
                                                                 <thead className="text-slate-500">
                                                                     <tr>
-                                                                        <th className="px-4 py-1 text-left font-medium pl-8">Partiya</th>
-                                                                        <th className="px-4 py-1 text-left font-medium">Yaroqlilik Muddati</th>
-                                                                        <th className="px-4 py-1 text-right font-medium">Miqdor</th>
-                                                                        <th className="px-4 py-1 text-right font-medium">Tannarx</th>
+                                                                        <th className="px-4 py-1 text-left font-medium pl-8 border-r border-slate-200">Partiya</th>
+                                                                        <th className="px-4 py-1 text-left font-medium border-r border-slate-200">Yaroqlilik Muddati</th>
+                                                                        <th className="px-4 py-1 text-right font-medium border-r border-slate-200">Miqdor</th>
+                                                                        <th className="px-4 py-1 text-right font-medium border-r border-slate-200">Tannarx</th>
                                                                         <th className="px-4 py-1 text-right font-medium">Summa</th>
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
                                                                     {items.sort((a,b) => new Date(a.received_date).getTime() - new Date(b.received_date).getTime()).map(stockItem => (
                                                                         <tr key={stockItem.id}>
-                                                                            <td className="px-4 py-1.5 pl-8 font-medium">{stockItem.batch_number}</td>
-                                                                            <td className="px-4 py-1.5">{stockItem.expiry_date ? new Date(stockItem.expiry_date).toLocaleDateString() : 'Muddatsiz'}</td>
-                                                                            <td className="px-4 py-1.5 text-right font-mono">{stockItem.quantity.toFixed(2)}</td>
-                                                                            <td className="px-4 py-1.5 text-right font-mono">{formatCurrency(stockItem.cost)}</td>
+                                                                            <td className="px-4 py-1.5 pl-8 font-medium border-r border-slate-200">{stockItem.batch_number}</td>
+                                                                            <td className="px-4 py-1.5 border-r border-slate-200">{stockItem.expiry_date ? new Date(stockItem.expiry_date).toLocaleDateString() : 'Muddatsiz'}</td>
+                                                                            <td className="px-4 py-1.5 text-right font-mono border-r border-slate-200">{stockItem.quantity.toFixed(2)}</td>
+                                                                            <td className="px-4 py-1.5 text-right font-mono border-r border-slate-200">{formatCurrency(stockItem.cost)}</td>
                                                                             <td className="px-4 py-1.5 text-right font-mono">{formatCurrency(stockItem.quantity * stockItem.cost)}</td>
                                                                         </tr>
                                                                     ))}
@@ -211,9 +211,9 @@ export const BalanceSheetReport: React.FC<BalanceSheetReportProps> = ({ dataMana
                             </tbody>
                             <tfoot className="bg-slate-100 font-bold">
                                 <tr>
-                                    <td colSpan={5} className="px-4 py-4 text-right text-base">Jami Aktivlar:</td>
-                                    <td className="px-4 py-4 text-right font-mono text-lg text-slate-900">{formatCurrency(totalAssets)}</td>
-                                    <td colSpan={2}></td>
+                                    <td colSpan={5} className="px-4 py-4 text-right text-base border-r border-slate-200">Jami Aktivlar:</td>
+                                    <td className="px-4 py-4 text-right font-mono text-lg text-slate-900 border-r border-slate-200">{formatCurrency(totalAssets)}</td>
+                                    <td></td>
                                 </tr>
                             </tfoot>
                         </table>

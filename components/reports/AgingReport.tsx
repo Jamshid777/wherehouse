@@ -177,7 +177,7 @@ export const AgingReport: React.FC<AgingReportProps> = ({ dataManager }) => {
                         id="asOfDate"
                         value={asOfDate}
                         onChange={e => setAsOfDate(e.target.value)}
-                        className="px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500"
+                        className="px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-amber-500"
                     />
                 </div>
             </div>
@@ -187,53 +187,53 @@ export const AgingReport: React.FC<AgingReportProps> = ({ dataManager }) => {
             {!isLoading && reportData && (
                 <>
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                        <table className="w-full text-sm border-collapse">
                             <thead className="text-xs text-slate-500 uppercase bg-slate-50 tracking-wider">
                                 <tr>
-                                    <th className="px-4 py-3 text-left">Yetkazib beruvchi</th>
-                                    <th className="px-4 py-3 text-right">0-30 kun</th>
-                                    <th className="px-4 py-3 text-right">31-60 kun</th>
-                                    <th className="px-4 py-3 text-right">61-90 kun</th>
-                                    <th className="px-4 py-3 text-right">90+ kun</th>
+                                    <th className="px-4 py-3 text-left border-r border-slate-200">Yetkazib beruvchi</th>
+                                    <th className="px-4 py-3 text-right border-r border-slate-200">0-30 kun</th>
+                                    <th className="px-4 py-3 text-right border-r border-slate-200">31-60 kun</th>
+                                    <th className="px-4 py-3 text-right border-r border-slate-200">61-90 kun</th>
+                                    <th className="px-4 py-3 text-right border-r border-slate-200">90+ kun</th>
                                     <th className="px-4 py-3 text-right font-bold">Jami qarz</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200">
                                 {reportData.map(d => (
                                     <tr key={d.supplierId} className="hover:bg-slate-50">
-                                        <td className="px-4 py-3 font-medium text-slate-900">{d.supplierName}</td>
-                                        <td className="px-4 py-3 text-right font-mono text-slate-600">
+                                        <td className="px-4 py-3 font-medium text-slate-900 border-r border-slate-200">{d.supplierName}</td>
+                                        <td className="px-4 py-3 text-right font-mono text-slate-600 border-r border-slate-200">
                                             <button 
                                                 onClick={() => handleCellClick(d.supplierName, '0-30 kun', d.bucket1.docs)}
                                                 disabled={d.bucket1.total === 0}
-                                                className="w-full text-right disabled:cursor-default hover:text-blue-600 hover:underline disabled:hover:no-underline disabled:hover:text-slate-600"
+                                                className="w-full text-right disabled:cursor-default hover:text-amber-600 hover:underline disabled:hover:no-underline disabled:hover:text-slate-600"
                                             >
                                                 {formatCurrency(d.bucket1.total)}
                                             </button>
                                         </td>
-                                        <td className="px-4 py-3 text-right font-mono text-slate-600">
+                                        <td className="px-4 py-3 text-right font-mono text-slate-600 border-r border-slate-200">
                                             <button 
                                                 onClick={() => handleCellClick(d.supplierName, '31-60 kun', d.bucket2.docs)}
                                                 disabled={d.bucket2.total === 0}
-                                                className="w-full text-right disabled:cursor-default hover:text-blue-600 hover:underline disabled:hover:no-underline disabled:hover:text-slate-600"
+                                                className="w-full text-right disabled:cursor-default hover:text-amber-600 hover:underline disabled:hover:no-underline disabled:hover:text-slate-600"
                                             >
                                                 {formatCurrency(d.bucket2.total)}
                                             </button>
                                         </td>
-                                        <td className="px-4 py-3 text-right font-mono text-slate-600">
+                                        <td className="px-4 py-3 text-right font-mono text-slate-600 border-r border-slate-200">
                                             <button 
                                                 onClick={() => handleCellClick(d.supplierName, '61-90 kun', d.bucket3.docs)}
                                                 disabled={d.bucket3.total === 0}
-                                                className="w-full text-right disabled:cursor-default hover:text-blue-600 hover:underline disabled:hover:no-underline disabled:hover:text-slate-600"
+                                                className="w-full text-right disabled:cursor-default hover:text-amber-600 hover:underline disabled:hover:no-underline disabled:hover:text-slate-600"
                                             >
                                                 {formatCurrency(d.bucket3.total)}
                                             </button>
                                         </td>
-                                        <td className="px-4 py-3 text-right font-mono text-slate-600">
+                                        <td className="px-4 py-3 text-right font-mono text-slate-600 border-r border-slate-200">
                                             <button 
                                                 onClick={() => handleCellClick(d.supplierName, '90+ kun', d.bucket4.docs)}
                                                 disabled={d.bucket4.total === 0}
-                                                className="w-full text-right disabled:cursor-default hover:text-blue-600 hover:underline disabled:hover:no-underline disabled:hover:text-slate-600"
+                                                className="w-full text-right disabled:cursor-default hover:text-amber-600 hover:underline disabled:hover:no-underline disabled:hover:text-slate-600"
                                             >
                                                 {formatCurrency(d.bucket4.total)}
                                             </button>
@@ -245,11 +245,11 @@ export const AgingReport: React.FC<AgingReportProps> = ({ dataManager }) => {
                             {totals && (
                                 <tfoot className="bg-slate-50 font-bold">
                                     <tr>
-                                        <td className="px-4 py-3 text-left">Jami</td>
-                                        <td className="px-4 py-3 text-right font-mono">{formatCurrency(totals.bucket1)}</td>
-                                        <td className="px-4 py-3 text-right font-mono">{formatCurrency(totals.bucket2)}</td>
-                                        <td className="px-4 py-3 text-right font-mono">{formatCurrency(totals.bucket3)}</td>
-                                        <td className="px-4 py-3 text-right font-mono">{formatCurrency(totals.bucket4)}</td>
+                                        <td className="px-4 py-3 text-left border-r border-slate-200">Jami</td>
+                                        <td className="px-4 py-3 text-right font-mono border-r border-slate-200">{formatCurrency(totals.bucket1)}</td>
+                                        <td className="px-4 py-3 text-right font-mono border-r border-slate-200">{formatCurrency(totals.bucket2)}</td>
+                                        <td className="px-4 py-3 text-right font-mono border-r border-slate-200">{formatCurrency(totals.bucket3)}</td>
+                                        <td className="px-4 py-3 text-right font-mono border-r border-slate-200">{formatCurrency(totals.bucket4)}</td>
                                         <td className="px-4 py-3 text-right font-mono text-lg text-slate-900">{formatCurrency(totals.total)}</td>
                                     </tr>
                                 </tfoot>
@@ -262,26 +262,26 @@ export const AgingReport: React.FC<AgingReportProps> = ({ dataManager }) => {
                     {modalData && (
                         <Modal isOpen={!!modalData} onClose={handleCloseModal} title={modalData.title} size="lg">
                             <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
+                                <table className="w-full text-sm border-collapse">
                                     <thead className="text-xs text-slate-500 uppercase bg-slate-50">
                                         <tr>
-                                            <th className="px-4 py-2 text-left">Hujjat Raqami</th>
-                                            <th className="px-4 py-2 text-left">Sana</th>
+                                            <th className="px-4 py-2 text-left border-r border-slate-200">Hujjat Raqami</th>
+                                            <th className="px-4 py-2 text-left border-r border-slate-200">Sana</th>
                                             <th className="px-4 py-2 text-right">Summa</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-200">
                                         {modalData.docs.map((doc, index) => (
                                             <tr key={index}>
-                                                <td className="px-4 py-2 font-medium">{doc.docNumber}</td>
-                                                <td className="px-4 py-2">{doc.date === 'N/A' ? 'N/A' : new Date(doc.date).toLocaleDateString()}</td>
+                                                <td className="px-4 py-2 font-medium border-r border-slate-200">{doc.docNumber}</td>
+                                                <td className="px-4 py-2 border-r border-slate-200">{doc.date === 'N/A' ? 'N/A' : new Date(doc.date).toLocaleDateString()}</td>
                                                 <td className="px-4 py-2 font-mono text-right">{formatCurrency(doc.amount)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                     <tfoot className="bg-slate-50 font-bold">
                                         <tr>
-                                            <td colSpan={2} className="px-4 py-2 text-right">Jami:</td>
+                                            <td colSpan={2} className="px-4 py-2 text-right border-r border-slate-200">Jami:</td>
                                             <td className="px-4 py-2 text-right font-mono">{formatCurrency(modalData.docs.reduce((sum, d) => sum + d.amount, 0))}</td>
                                         </tr>
                                     </tfoot>

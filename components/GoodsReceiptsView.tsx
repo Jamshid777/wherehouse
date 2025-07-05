@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { GoodsReceiptNote, GoodsReceiptItem, DocumentStatus, PaymentStatus, Product } from '../types';
+import { GoodsReceiptNote, GoodsReceiptItem, DocumentStatus, PaymentStatus, Product, Supplier } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
 import { Modal } from './Modal';
 import { PlusIcon } from './icons/PlusIcon';
@@ -8,6 +8,9 @@ import { EditIcon } from './icons/EditIcon';
 import { TrashIcon } from './icons/TrashIcon';
 import { ChevronDownIcon } from './icons/ChevronDownIcon';
 import { WarningIcon } from './icons/WarningIcon';
+import { ProductFormModal } from './forms/ProductFormModal';
+import { SupplierFormModal } from './forms/SupplierFormModal';
+
 
 interface GoodsReceiptsViewProps {
   dataManager: UseMockDataReturnType;
@@ -137,7 +140,7 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
         <h2 className="text-2xl font-bold text-slate-800">Kirim Hujjatlari</h2>
         <button
           onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2.5 rounded-lg hover:bg-blue-600 transition-colors shadow"
+          className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2.5 rounded-lg hover:from-amber-600 hover:to-amber-700 transition-all shadow"
         >
           <PlusIcon className="h-5 w-5" />
           <span>Yangi Kirim</span>
@@ -162,16 +165,16 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left">
+        <table className="w-full text-sm text-left border-collapse">
           <thead className="text-xs text-slate-500 uppercase bg-slate-50 tracking-wider">
             <tr>
-              <th scope="col" className="px-2 py-3 w-8"></th>
-              <th scope="col" className="px-6 py-3">Raqam / Sana</th>
-              <th scope="col" className="px-6 py-3">Yetkazib beruvchi</th>
-              <th scope="col" className="px-6 py-3">Ombor</th>
-              <th scope="col" className="px-6 py-3 text-right">Jami Summa</th>
-              <th scope="col" className="px-6 py-3">To'lov Holati</th>
-              <th scope="col" className="px-6 py-3">Hujjat Holati</th>
+              <th scope="col" className="px-2 py-3 w-8 border-r border-slate-200"></th>
+              <th scope="col" className="px-6 py-3 border-r border-slate-200">Raqam / Sana</th>
+              <th scope="col" className="px-6 py-3 border-r border-slate-200">Yetkazib beruvchi</th>
+              <th scope="col" className="px-6 py-3 border-r border-slate-200">Ombor</th>
+              <th scope="col" className="px-6 py-3 text-right border-r border-slate-200">Jami Summa</th>
+              <th scope="col" className="px-6 py-3 border-r border-slate-200">To'lov Holati</th>
+              <th scope="col" className="px-6 py-3 border-r border-slate-200">Hujjat Holati</th>
               <th scope="col" className="px-6 py-3 text-center">Amallar</th>
             </tr>
           </thead>
@@ -184,17 +187,17 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
               return (
               <React.Fragment key={note.id}>
                 <tr onClick={() => handleToggleExpand(note.id)} className="hover:bg-slate-50 cursor-pointer">
-                    <td className="px-2 py-4 text-center">
+                    <td className="px-2 py-4 text-center border-r border-slate-200">
                         <ChevronDownIcon className={`h-5 w-5 text-slate-400 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap border-r border-slate-200">
                         <div className="font-medium text-slate-900">{note.doc_number}</div>
                         <div className="text-xs text-slate-500">{new Date(note.date).toLocaleDateString()}</div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600">{note.supplier_id === 'SYSTEM' ? 'Tizim (Inventarizatsiya)' : suppliers.find(s => s.id === note.supplier_id)?.name || 'Noma\'lum'}</td>
-                    <td className="px-6 py-4 text-slate-600">{warehouses.find(w => w.id === note.warehouse_id)?.name || 'Noma\'lum'}</td>
-                    <td className="px-6 py-4 text-right font-mono text-slate-800">{formatCurrency(total)}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{note.supplier_id === 'SYSTEM' ? 'Tizim (Inventarizatsiya)' : suppliers.find(s => s.id === note.supplier_id)?.name || 'Noma\'lum'}</td>
+                    <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{warehouses.find(w => w.id === note.warehouse_id)?.name || 'Noma\'lum'}</td>
+                    <td className="px-6 py-4 text-right font-mono text-slate-800 border-r border-slate-200">{formatCurrency(total)}</td>
+                    <td className="px-6 py-4 border-r border-slate-200">
                       <div className="flex items-center gap-2">
                           <span className={`px-2 py-1 text-xs font-medium rounded-full ${paymentStatus.className}`}>
                             {paymentStatus.text}
@@ -207,8 +210,8 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
                           </div>
                       </div>
                     </td>
-                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${note.status === DocumentStatus.CONFIRMED ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                     <td className="px-6 py-4 border-r border-slate-200">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${note.status === DocumentStatus.CONFIRMED ? 'bg-amber-100 text-amber-800' : 'bg-yellow-100 text-yellow-800'}`}>
                         {note.status === DocumentStatus.CONFIRMED ? 'Tasdiqlangan' : 'Qoralama'}
                       </span>
                     </td>
@@ -216,7 +219,7 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
                         <div className="flex justify-center items-center gap-2">
                           {note.status === DocumentStatus.DRAFT ? (
                             <>
-                                <button onClick={(e) => { e.stopPropagation(); handleOpenModal(note); }} title="Tahrirlash" className="p-2 rounded-full text-blue-600 hover:bg-blue-100 transition-colors"><EditIcon className="h-5 w-5"/></button>
+                                <button onClick={(e) => { e.stopPropagation(); handleOpenModal(note); }} title="Tahrirlash" className="p-2 rounded-full text-amber-600 hover:bg-amber-100 transition-colors"><EditIcon className="h-5 w-5"/></button>
                                 <button onClick={(e) => { e.stopPropagation(); handleDelete(note.id); }} title="O'chirish" className="p-2 rounded-full text-red-600 hover:bg-red-100 transition-colors"><TrashIcon className="h-5 w-5"/></button>
                                 <div className="relative group flex items-center">
                                   <button 
@@ -251,21 +254,21 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
                             <div className="px-8 py-4">
                                 <h4 className="text-sm font-semibold text-slate-700 mb-2">Hujjat tarkibi</h4>
                                 {note.items.length > 0 ? (
-                                    <table className="w-full text-xs bg-white rounded">
+                                    <table className="w-full text-xs bg-white rounded border-collapse">
                                         <thead>
                                             <tr className="border-b">
-                                                <th className="p-2 text-left font-medium">Mahsulot</th>
-                                                <th className="p-2 text-right font-medium">Miqdor</th>
-                                                <th className="p-2 text-right font-medium">Narx</th>
+                                                <th className="p-2 text-left font-medium border-r border-slate-200">Mahsulot</th>
+                                                <th className="p-2 text-right font-medium border-r border-slate-200">Miqdor</th>
+                                                <th className="p-2 text-right font-medium border-r border-slate-200">Narx</th>
                                                 <th className="p-2 text-right font-medium">Summa</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                         {note.items.map((item, index) => (
                                             <tr key={index} className="border-b last:border-b-0">
-                                                <td className="p-2">{products.find(p => p.id === item.productId)?.name || 'Noma\'lum'}</td>
-                                                <td className="p-2 text-right font-mono">{item.quantity}</td>
-                                                <td className="p-2 text-right font-mono">{formatCurrency(item.price)}</td>
+                                                <td className="p-2 border-r border-slate-200">{products.find(p => p.id === item.productId)?.name || 'Noma\'lum'}</td>
+                                                <td className="p-2 text-right font-mono border-r border-slate-200">{item.quantity}</td>
+                                                <td className="p-2 text-right font-mono border-r border-slate-200">{formatCurrency(item.price)}</td>
                                                 <td className="p-2 text-right font-mono">{formatCurrency(item.price * item.quantity)}</td>
                                             </tr>
                                         ))}
@@ -309,10 +312,17 @@ interface GoodsReceiptFormModalProps {
 }
 
 const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({isOpen, onClose, onSave, note, dataManager, productToAdd}) => {
-    const { products, suppliers, warehouses, getNoteTotal, generateNextBatchNumber } = dataManager;
+    const { products, suppliers, warehouses, getNoteTotal, generateNextBatchNumber, addProduct, updateProduct, addSupplier, updateSupplier, isInnUnique } = dataManager;
     const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], supplier_id: '', warehouse_id: '' });
     const [items, setItems] = useState<Omit<GoodsReceiptItem, 'id'>[]>([]);
     const [paidAmount, setPaidAmount] = useState(0);
+
+    const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
+    const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+
+    const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+    const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+    const [editingProductIndex, setEditingProductIndex] = useState<number | null>(null);
 
     const totalAmount = useMemo(() => getNoteTotal(items as GoodsReceiptItem[]), [items, getNoteTotal]);
 
@@ -374,8 +384,51 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({isOpen, on
         }
         onSave({ ...formData, date: new Date(formData.date).toISOString(), items, paid_amount: paidAmount });
     }
-    
+
     const getProductUnit = (productId: string) => products.find(p => p.id === productId)?.unit || '';
+
+    // --- Supplier Modal Handlers ---
+    const handleOpenSupplierModal = (supplier: Supplier | null) => {
+        setEditingSupplier(supplier);
+        setIsSupplierModalOpen(true);
+    };
+
+    const handleSupplierFormSubmit = (data: Omit<Supplier, 'id'> | Supplier) => {
+        if ('id' in data) {
+            updateSupplier(data);
+        } else {
+            const newSupplier = addSupplier(data);
+            setFormData(prev => ({...prev, supplier_id: newSupplier.id}));
+        }
+        setIsSupplierModalOpen(false);
+    };
+
+    // --- Product Modal Handlers ---
+    const handleOpenProductModal = (product: Product | null, index: number | null) => {
+        setEditingProduct(product);
+        setEditingProductIndex(index);
+        setIsProductModalOpen(true);
+    };
+
+    const handleProductFormSubmit = (data: Omit<Product, 'id'> | Product) => {
+        if ('id' in data) {
+            updateProduct(data);
+        } else {
+            if (editingProductIndex === null) return;
+            const newProduct = addProduct(data);
+            
+            const newItems = [...items];
+            const itemToUpdate = newItems[editingProductIndex];
+
+            itemToUpdate.productId = newProduct.id;
+            
+            if (!itemToUpdate.batch_number) {
+                itemToUpdate.batch_number = generateNextBatchNumber(newProduct.id);
+            }
+            setItems(newItems);
+        }
+        setIsProductModalOpen(false);
+    };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={note ? "Kirimni tahrirlash" : "Yangi kirim hujjati"} size="5xl">
@@ -388,9 +441,26 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({isOpen, on
                     </div>
                     <div>
                         <label htmlFor="supplier_id" className="block text-sm font-medium text-slate-700 mb-1">Yetkazib beruvchi</label>
-                        <select name="supplier_id" id="supplier_id" value={formData.supplier_id} onChange={handleHeaderChange} required className="w-full px-3 py-2.5 border border-slate-300 rounded-lg">
-                           {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                        </select>
+                        <div className="flex items-center gap-2">
+                            <select name="supplier_id" id="supplier_id" value={formData.supplier_id} onChange={handleHeaderChange} required className="w-full px-3 py-2.5 border border-slate-300 rounded-lg">
+                               {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                            <button type="button" title="Yangi yetkazib beruvchi qo'shish" onClick={() => handleOpenSupplierModal(null)} className="flex-shrink-0 p-2.5 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">
+                                <PlusIcon className="h-5 w-5 text-slate-600"/>
+                            </button>
+                            <button
+                                type="button"
+                                title="Yetkazib beruvchini tahrirlash"
+                                onClick={() => {
+                                    const supplierToEdit = suppliers.find(s => s.id === formData.supplier_id);
+                                    if (supplierToEdit) handleOpenSupplierModal(supplierToEdit);
+                                }}
+                                disabled={!formData.supplier_id}
+                                className="flex-shrink-0 p-2.5 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors disabled:text-slate-300 disabled:cursor-not-allowed"
+                            >
+                                <EditIcon className="h-5 w-5"/>
+                            </button>
+                        </div>
                     </div>
                     <div>
                         <label htmlFor="warehouse_id" className="block text-sm font-medium text-slate-700 mb-1">Qabul qiluvchi ombor</label>
@@ -404,15 +474,15 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({isOpen, on
                 <div className="border-t pt-4">
                     <h4 className="text-lg font-medium text-slate-800 mb-3">Mahsulotlar</h4>
                     <div className="overflow-auto border rounded-lg min-h-[240px] max-h-[45vh]">
-                        <table className="w-full text-sm">
+                        <table className="w-full text-sm border-collapse">
                             <thead className="bg-slate-50 sticky top-0 z-10">
                                 <tr>
-                                    <th className="px-2 py-2 text-left font-medium text-slate-600" style={{width: '25%'}}>Mahsulot</th>
-                                    <th className="px-2 py-2 text-left font-medium text-slate-600">Partiya №</th>
-                                    <th className="px-2 py-2 text-left font-medium text-slate-600">Yaroqlilik m.</th>
-                                    <th className="px-2 py-2 text-left font-medium text-slate-600">Miqdor</th>
-                                    <th className="px-2 py-2 text-left font-medium text-slate-600">Narx</th>
-                                    <th className="px-2 py-2 text-left font-medium text-slate-600">Summa</th>
+                                    <th className="px-2 py-2 text-left font-medium text-slate-600 border-r border-slate-200" style={{width: '25%'}}>Mahsulot</th>
+                                    <th className="px-2 py-2 text-left font-medium text-slate-600 border-r border-slate-200">Partiya №</th>
+                                    <th className="px-2 py-2 text-left font-medium text-slate-600 border-r border-slate-200">Yaroqlilik m.</th>
+                                    <th className="px-2 py-2 text-left font-medium text-slate-600 border-r border-slate-200">Miqdor</th>
+                                    <th className="px-2 py-2 text-left font-medium text-slate-600 border-r border-slate-200">Narx</th>
+                                    <th className="px-2 py-2 text-left font-medium text-slate-600 border-r border-slate-200">Summa</th>
                                     <th className="px-2 py-2"></th>
                                 </tr>
                             </thead>
@@ -427,22 +497,39 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({isOpen, on
                                 )}
                                 {items.map((item, index) => (
                                     <tr key={index}>
-                                        <td className="p-1">
-                                            <select value={item.productId} onChange={(e) => handleItemChange(index, 'productId', e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-md">
-                                                <option value="" disabled>Tanlang...</option>
-                                                {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                            </select>
+                                        <td className="p-1 border-r border-slate-200">
+                                            <div className="flex items-center gap-1">
+                                                <select value={item.productId} onChange={(e) => handleItemChange(index, 'productId', e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-md">
+                                                    <option value="" disabled>Tanlang...</option>
+                                                    {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                                </select>
+                                                <button type="button" title="Yangi mahsulot qo'shish" onClick={() => handleOpenProductModal(null, index)} className="flex-shrink-0 p-2 bg-slate-100 rounded-md hover:bg-slate-200 transition-colors">
+                                                    <PlusIcon className="h-4 w-4 text-slate-500"/>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    title="Mahsulotni tahrirlash"
+                                                    onClick={() => {
+                                                        const productToEdit = products.find(p => p.id === item.productId);
+                                                        if (productToEdit) handleOpenProductModal(productToEdit, index);
+                                                    }}
+                                                    disabled={!item.productId}
+                                                    className="flex-shrink-0 p-2 bg-slate-100 rounded-md hover:bg-slate-200 transition-colors disabled:text-slate-300 disabled:cursor-not-allowed"
+                                                >
+                                                    <EditIcon className="h-4 w-4"/>
+                                                </button>
+                                            </div>
                                         </td>
-                                        <td className="p-1"><input type="text" value={item.batch_number} onChange={(e) => handleItemChange(index, 'batch_number', e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-md" required /></td>
-                                        <td className="p-1"><input type="date" value={item.expiry_date ? item.expiry_date.split('T')[0] : ''} onChange={(e) => handleItemChange(index, 'expiry_date', e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-md"/></td>
-                                        <td className="p-1">
+                                        <td className="p-1 border-r border-slate-200"><input type="text" value={item.batch_number} onChange={(e) => handleItemChange(index, 'batch_number', e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-md" required /></td>
+                                        <td className="p-1 border-r border-slate-200"><input type="date" value={item.expiry_date ? item.expiry_date.split('T')[0] : ''} onChange={(e) => handleItemChange(index, 'expiry_date', e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-md"/></td>
+                                        <td className="p-1 border-r border-slate-200">
                                             <div className="relative">
                                                 <input type="number" value={item.quantity} onChange={(e) => handleItemChange(index, 'quantity', e.target.value)} min="0.01" step="any" className="w-full px-3 py-2.5 pr-10 border border-slate-300 rounded-md"/>
                                                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 text-xs">{getProductUnit(item.productId)}</span>
                                             </div>
                                         </td>
-                                        <td className="p-1"><input type="number" value={item.price} onChange={(e) => handleItemChange(index, 'price', e.target.value)} min="0" step="any" className="w-full px-3 py-2.5 border border-slate-300 rounded-md"/></td>
-                                        <td className="p-1 font-mono">{formatCurrency(item.quantity * item.price)}</td>
+                                        <td className="p-1 border-r border-slate-200"><input type="number" value={item.price} onChange={(e) => handleItemChange(index, 'price', e.target.value)} min="0" step="any" className="w-full px-3 py-2.5 border border-slate-300 rounded-md"/></td>
+                                        <td className="p-1 font-mono border-r border-slate-200">{formatCurrency(item.quantity * item.price)}</td>
                                         <td className="p-1 text-center">
                                             <button type="button" onClick={() => handleRemoveItem(index)} className="text-red-500 hover:text-red-700"><TrashIcon className="h-5 w-5"/></button>
                                         </td>
@@ -451,7 +538,7 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({isOpen, on
                             </tbody>
                         </table>
                     </div>
-                    <button type="button" onClick={handleAddItem} className="mt-4 flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-medium">
+                    <button type="button" onClick={handleAddItem} className="mt-4 flex items-center gap-2 text-sm text-amber-600 hover:text-amber-800 font-medium">
                         <PlusIcon className="h-4 w-4"/> Qator qo'shish
                     </button>
                 </div>
@@ -478,10 +565,24 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({isOpen, on
                     </div>
                     <div className="flex justify-end gap-3">
                         <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">Bekor qilish</button>
-                        <button type="submit" className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Saqlash</button>
+                        <button type="submit" className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700">Saqlash</button>
                     </div>
                 </div>
             </form>
+
+            <SupplierFormModal
+                isOpen={isSupplierModalOpen}
+                onClose={() => setIsSupplierModalOpen(false)}
+                onSubmit={handleSupplierFormSubmit}
+                supplier={editingSupplier}
+                isInnUnique={isInnUnique}
+            />
+            <ProductFormModal
+                isOpen={isProductModalOpen}
+                onClose={() => setIsProductModalOpen(false)}
+                onSubmit={handleProductFormSubmit}
+                product={editingProduct}
+            />
         </Modal>
     );
 }

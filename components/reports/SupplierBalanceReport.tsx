@@ -118,10 +118,10 @@ export const SupplierBalanceReport: React.FC<SupplierBalanceReportProps> = ({ da
 
             {!isLoading && reportData && (
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm border-collapse">
                         <thead className="text-xs text-slate-500 uppercase bg-slate-50 tracking-wider">
                             <tr>
-                                <th className="px-6 py-3 text-left w-4/5">Yetkazib beruvchi</th>
+                                <th className="px-6 py-3 text-left w-4/5 border-r border-slate-200">Yetkazib beruvchi</th>
                                 <th className="px-6 py-3 text-right font-bold">Joriy Balans</th>
                             </tr>
                         </thead>
@@ -131,7 +131,7 @@ export const SupplierBalanceReport: React.FC<SupplierBalanceReportProps> = ({ da
                                 return (
                                 <React.Fragment key={d.supplierId}>
                                 <tr onClick={() => handleToggleExpand(d.supplierId)} className="hover:bg-slate-50 cursor-pointer border-b border-slate-200">
-                                    <td className="px-6 py-4 font-medium text-slate-900">
+                                    <td className="px-6 py-4 font-medium text-slate-900 border-r border-slate-200">
                                         <div className="flex items-center gap-2">
                                             <ChevronDownIcon className={`h-4 w-4 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
                                             {d.supplierName}
@@ -146,20 +146,20 @@ export const SupplierBalanceReport: React.FC<SupplierBalanceReportProps> = ({ da
                                         <td colSpan={2} className="p-2">
                                              <div className="p-2 bg-white rounded-md border">
                                                 <h4 className="text-sm font-semibold mb-2 px-2">Hujjatlar ({d.supplierName})</h4>
-                                                <table className="w-full text-xs">
+                                                <table className="w-full text-xs border-collapse">
                                                     <thead className="text-slate-500">
                                                         <tr>
-                                                            <th className="px-2 py-1 text-left">Sana</th>
-                                                            <th className="px-2 py-1 text-left">Hujjat</th>
-                                                            <th className="px-2 py-1 text-left">Turi</th>
-                                                            <th className="px-2 py-1 text-right">Qarz (Kirim)</th>
+                                                            <th className="px-2 py-1 text-left border-r border-slate-200">Sana</th>
+                                                            <th className="px-2 py-1 text-left border-r border-slate-200">Hujjat</th>
+                                                            <th className="px-2 py-1 text-left border-r border-slate-200">Turi</th>
+                                                            <th className="px-2 py-1 text-right border-r border-slate-200">Qarz (Kirim)</th>
                                                             <th className="px-2 py-1 text-right">To'lov</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
                                                         <tr className="border-t bg-slate-100">
-                                                            <td colSpan={3} className="px-2 py-1.5 font-semibold text-slate-600">Boshlang'ich qoldiq</td>
-                                                            <td className="px-2 py-1.5 text-right font-mono text-green-700">{d.initialBalance > 0 ? formatCurrency(d.initialBalance) : '-'}</td>
+                                                            <td colSpan={3} className="px-2 py-1.5 font-semibold text-slate-600 border-r border-slate-200">Boshlang'ich qoldiq</td>
+                                                            <td className="px-2 py-1.5 text-right font-mono text-green-700 border-r border-slate-200">{d.initialBalance > 0 ? formatCurrency(d.initialBalance) : '-'}</td>
                                                             <td className="px-2 py-1.5 text-right font-mono text-red-700">{d.initialBalance < 0 ? formatCurrency(Math.abs(d.initialBalance)) : '-'}</td>
                                                         </tr>
                                                         {d.details.map((det, i) => {
@@ -171,15 +171,15 @@ export const SupplierBalanceReport: React.FC<SupplierBalanceReportProps> = ({ da
                                                                         className={`border-t ${isReceipt ? 'cursor-pointer hover:bg-slate-200/50' : ''}`}
                                                                         onClick={() => isReceipt && handleToggleDocExpand(det.id)}
                                                                     >
-                                                                        <td className="px-2 py-1.5">{new Date(det.date).toLocaleDateString()}</td>
-                                                                        <td className="px-2 py-1.5">
+                                                                        <td className="px-2 py-1.5 border-r border-slate-200">{new Date(det.date).toLocaleDateString()}</td>
+                                                                        <td className="px-2 py-1.5 border-r border-slate-200">
                                                                             <div className="flex items-center gap-1">
                                                                                 {isReceipt && <ChevronDownIcon className={`h-4 w-4 text-slate-400 transition-transform ${isDocExpanded ? '' : '-rotate-90'}`} />}
                                                                                 <span>{det.doc_number}</span>
                                                                             </div>
                                                                         </td>
-                                                                        <td className="px-2 py-1.5">{isReceipt ? "Kirim" : "To'lov"}</td>
-                                                                        <td className="px-2 py-1.5 text-right font-mono text-green-700">{isReceipt ? formatCurrency(getNoteTotal(det.items)) : '-'}</td>
+                                                                        <td className="px-2 py-1.5 border-r border-slate-200">{isReceipt ? "Kirim" : "To'lov"}</td>
+                                                                        <td className="px-2 py-1.5 text-right font-mono text-green-700 border-r border-slate-200">{isReceipt ? formatCurrency(getNoteTotal(det.items)) : '-'}</td>
                                                                         <td className="px-2 py-1.5 text-right font-mono text-red-700">{det.docType === 'payment' ? formatCurrency(det.amount) : '-'}</td>
                                                                     </tr>
                                                                     {isDocExpanded && det.docType === 'receipt' && (
@@ -218,7 +218,7 @@ export const SupplierBalanceReport: React.FC<SupplierBalanceReportProps> = ({ da
                          {totals !== null && (
                             <tfoot className="bg-slate-100 font-bold border-t-2 border-slate-300">
                                 <tr>
-                                    <td className="px-6 py-3 text-left">Jami</td>
+                                    <td className="px-6 py-3 text-left border-r border-slate-200">Jami</td>
                                     <td className={`px-6 py-3 text-right font-mono text-lg ${totals > 0 ? 'text-red-600' : totals < 0 ? 'text-green-600' : 'text-slate-900'}`}>
                                         {formatCurrency(totals)}
                                     </td>

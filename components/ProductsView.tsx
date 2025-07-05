@@ -2,9 +2,9 @@
 import React, { useState, useMemo } from 'react';
 import { Product, Unit, DocumentStatus } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
-import { Modal } from './Modal';
 import { PlusIcon } from './icons/PlusIcon';
 import { SearchIcon } from './icons/SearchIcon';
+import { ProductFormModal } from './forms/ProductFormModal';
 
 interface ProductsViewProps {
   dataManager: UseMockDataReturnType;
@@ -27,32 +27,47 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ dataManager }) => {
   }, [products, searchTerm]);
 
   const supplierPricesByProduct = useMemo(() => {
-    const productPricesCache = new Map<string, Map<string, { price: number }>>();
+    // Cache for product -> list of suppliers with their latest price.
+    // The list will be implicitly sorted by recency due to the processing order.
+    const productSuppliersCache = new Map<string, { supplierId: string, price: number }[]>();
 
+    // Get confirmed receipts and sort them by date descending (most recent first).
     const confirmedReceipts = goodsReceipts
         .filter(note => note.status === DocumentStatus.CONFIRMED && note.supplier_id !== 'SYSTEM')
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     for (const note of confirmedReceipts) {
         for (const item of note.items) {
-            if (!productPricesCache.has(item.productId)) {
-                productPricesCache.set(item.productId, new Map());
+            // Get or create the list of suppliers for the current product.
+            if (!productSuppliersCache.has(item.productId)) {
+                productSuppliersCache.set(item.productId, []);
             }
-            const supplierPrices = productPricesCache.get(item.productId)!;
-            // Since we sorted by date ascending, we just overwrite to get the latest.
-            supplierPrices.set(note.supplier_id, { price: item.price });
+            const suppliersForProduct = productSuppliersCache.get(item.productId)!;
+
+            // If we have less than 5 suppliers AND this supplier isn't already in the list, add them.
+            // Because receipts are sorted by date descending, the first time we encounter a supplier for a product,
+            // it's from their most recent transaction with that product.
+            if (suppliersForProduct.length < 5 && !suppliersForProduct.some(s => s.supplierId === note.supplier_id)) {
+                suppliersForProduct.push({
+                    supplierId: note.supplier_id,
+                    price: item.price,
+                });
+            }
         }
     }
 
+    // Now, format the cached data for display.
     const formattedPrices = new Map<string, string>();
-    for (const [productId, pricesMap] of productPricesCache.entries()) {
-        const priceEntries = Array.from(pricesMap.entries()).map(([supplierId, priceInfo]) => {
+    for (const [productId, suppliersList] of productSuppliersCache.entries()) {
+        const priceEntries = suppliersList.map(({ supplierId, price }) => {
             const supplier = suppliers.find(s => s.id === supplierId);
             return {
                 name: supplier?.name || 'Noma\'lum',
-                price: priceInfo.price,
+                price: price,
             };
         });
+        
+        // The list is already sorted by recency and limited to 5.
         formattedPrices.set(productId, priceEntries.map(entry => `${entry.name} (${formatCurrency(entry.price)} so'm)`).join(', '));
     }
     return formattedPrices;
@@ -95,12 +110,12 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ dataManager }) => {
               placeholder="Qidirish..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+              className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition"
             />
           </div>
           <button
             onClick={() => handleOpenModal()}
-            className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2.5 rounded-lg hover:bg-blue-600 transition-colors shadow"
+            className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2.5 rounded-lg hover:from-amber-600 hover:to-amber-700 transition-all shadow"
           >
             <PlusIcon className="h-5 w-5" />
             <span>Qo'shish</span>
@@ -109,27 +124,27 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ dataManager }) => {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left">
-          <thead className="text-xs text-slate-500 uppercase bg-slate-50 tracking-wider">
+        <table className="w-full text-sm text-left border-collapse">
+          <thead className="text-xs text-slate-600 bg-slate-50 border-b-2 border-slate-200">
             <tr>
-              <th scope="col" className="px-6 py-3">T/r</th>
-              <th scope="col" className="px-6 py-3">Nomi</th>
-              <th scope="col" className="px-6 py-3">O'lchov birligi</th>
-              <th scope="col" className="px-6 py-3">Guruhi</th>
-              <th scope="col" className="px-6 py-3 text-right">Minimal zaxira</th>
-              <th scope="col" className="px-6 py-3" style={{minWidth: '300px'}}>Yetkazib beruvchilar (Narxi)</th>
+              <th scope="col" className="px-6 py-3 border-r border-slate-200">T/r</th>
+              <th scope="col" className="px-6 py-3 border-r border-slate-200">Nomi</th>
+              <th scope="col" className="px-6 py-3 border-r border-slate-200">O'lchov birligi</th>
+              <th scope="col" className="px-6 py-3 border-r border-slate-200">Guruhi</th>
+              <th scope="col" className="px-6 py-3 text-right border-r border-slate-200">Minimal zaxira</th>
+              <th scope="col" className="px-6 py-3 border-r border-slate-200" style={{minWidth: '300px'}}>Yetkazib beruvchilar (Narxi)</th>
               <th scope="col" className="px-6 py-3 text-center">Amallar</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
             {filteredProducts.map((product, index) => (
               <tr key={product.id} className="hover:bg-slate-50">
-                <td className="px-6 py-4 text-slate-600">{index + 1}</td>
-                <td className="px-6 py-4 font-medium text-slate-900 whitespace-nowrap">{product.name}</td>
-                <td className="px-6 py-4 text-slate-600">{product.unit}</td>
-                <td className="px-6 py-4 text-slate-600">{product.category}</td>
-                <td className="px-6 py-4 text-slate-600 text-right font-mono">{product.min_stock}</td>
-                <td className="px-6 py-4 text-slate-600">
+                <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{index + 1}</td>
+                <td className="px-6 py-4 font-medium text-slate-900 whitespace-nowrap border-r border-slate-200">{product.name}</td>
+                <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{product.unit}</td>
+                <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{product.category}</td>
+                <td className="px-6 py-4 text-slate-600 text-right font-mono border-r border-slate-200">{product.min_stock}</td>
+                <td className="px-6 py-4 text-slate-600 border-r border-slate-200">
                     {supplierPricesByProduct.get(product.id) || <span className="text-slate-400">Ma'lumot yo'q</span>}
                 </td>
                 <td className="px-6 py-4 text-center">
@@ -164,85 +179,3 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ dataManager }) => {
     </div>
   );
 };
-
-interface ProductFormModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSubmit: (data: Omit<Product, 'id'> | Product) => void;
-    product: Product | null;
-}
-
-const ProductFormModal: React.FC<ProductFormModalProps> = ({isOpen, onClose, onSubmit, product}) => {
-    const [formData, setFormData] = useState({
-        name: '',
-        sku: '',
-        category: '',
-        unit: Unit.KG,
-        min_stock: 0,
-    });
-
-    React.useEffect(() => {
-        if(product){
-            setFormData({
-                name: product.name,
-                sku: product.sku,
-                category: product.category,
-                unit: product.unit,
-                min_stock: product.min_stock,
-            });
-        } else {
-            setFormData({
-                name: '', sku: '', category: '', unit: Unit.KG, min_stock: 0,
-            });
-        }
-    }, [product, isOpen]);
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({...prev, [name]: name === 'min_stock' ? parseFloat(value) || 0 : value}));
-    }
-
-    const handleFormSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if(product){
-            onSubmit({...formData, id: product.id});
-        } else {
-            onSubmit(formData);
-        }
-    }
-
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title={product ? "Mahsulotni tahrirlash" : "Yangi mahsulot qo'shish"}>
-            <form onSubmit={handleFormSubmit} className="space-y-4">
-                 <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">Mahsulot nomi</label>
-                    <input type="text" name="name" id="name" value={formData.name} onChange={handleChange} required className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500" />
-                </div>
-                 <div>
-                    <label htmlFor="sku" className="block text-sm font-medium text-slate-700 mb-1">SKU (Artikul)</label>
-                    <input type="text" name="sku" id="sku" value={formData.sku} onChange={handleChange} required className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500" />
-                </div>
-                 <div>
-                    <label htmlFor="category" className="block text-sm font-medium text-slate-700 mb-1">Kategoriya</label>
-                    <input type="text" name="category" id="category" value={formData.category} onChange={handleChange} required className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500" />
-                </div>
-                 <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label htmlFor="unit" className="block text-sm font-medium text-slate-700 mb-1">O'lchov birligi</label>
-                        <select name="unit" id="unit" value={formData.unit} onChange={handleChange} required className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500">
-                            {Object.values(Unit).map(u => <option key={u} value={u}>{u}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label htmlFor="min_stock" className="block text-sm font-medium text-slate-700 mb-1">Minimal zaxira</label>
-                        <input type="number" name="min_stock" id="min_stock" value={formData.min_stock} onChange={handleChange} required className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500" />
-                    </div>
-                </div>
-                <div className="flex justify-end gap-3 pt-4">
-                    <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">Bekor qilish</button>
-                    <button type="submit" className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Saqlash</button>
-                </div>
-            </form>
-        </Modal>
-    );
-}

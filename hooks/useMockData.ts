@@ -195,7 +195,11 @@ export const useMockData = () => {
 
 
   // Product Operations
-  const addProduct = (product: Omit<Product, 'id'>) => setProducts(prev => [{ ...product, id: `p${Date.now()}` }, ...prev]);
+  const addProduct = (product: Omit<Product, 'id'>): Product => {
+    const newProduct = { ...product, id: `p${Date.now()}` };
+    setProducts(prev => [newProduct, ...prev]);
+    return newProduct;
+  };
   const updateProduct = (updatedProduct: Product) => setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
   const deleteProduct = (productId: string) => setProducts(prev => prev.filter(p => p.id !== productId));
 
@@ -205,7 +209,11 @@ export const useMockData = () => {
   const deleteWarehouse = (warehouseId: string) => setWarehouses(prev => prev.filter(w => w.id !== warehouseId));
   
   // Supplier Operations
-  const addSupplier = (supplier: Omit<Supplier, 'id'>) => setSuppliers(prev => [{ ...supplier, id: `s${Date.now()}` }, ...prev]);
+  const addSupplier = (supplier: Omit<Supplier, 'id'>): Supplier => {
+    const newSupplier = { ...supplier, id: `s${Date.now()}` };
+    setSuppliers(prev => [newSupplier, ...prev]);
+    return newSupplier;
+  };
   const updateSupplier = (updatedSupplier: Supplier) => setSuppliers(prev => prev.map(s => s.id === updatedSupplier.id ? updatedSupplier : s));
   const deleteSupplier = (supplierId: string) => setSuppliers(prev => prev.filter(s => s.id !== supplierId));
   const isInnUnique = (inn: string, currentId: string | null = null) => !suppliers.some(s => s.inn === inn && s.id !== currentId);

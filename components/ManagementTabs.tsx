@@ -22,7 +22,7 @@ export const ManagementTabs: React.FC<ManagementTabsProps> = ({ dataManager }) =
           onClick={() => setActiveTab('warehouses')}
           className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
             activeTab === 'warehouses'
-              ? 'border-b-2 border-blue-500 text-blue-600'
+              ? 'border-b-2 border-amber-500 text-amber-600'
               : 'text-slate-500 hover:text-slate-700'
           }`}
         >
@@ -33,7 +33,7 @@ export const ManagementTabs: React.FC<ManagementTabsProps> = ({ dataManager }) =
           onClick={() => setActiveTab('suppliers')}
           className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
             activeTab === 'suppliers'
-              ? 'border-b-2 border-blue-500 text-blue-600'
+              ? 'border-b-2 border-amber-500 text-amber-600'
               : 'text-slate-500 hover:text-slate-700'
           }`}
         >

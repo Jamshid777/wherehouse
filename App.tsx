@@ -69,8 +69,8 @@ const App: React.FC = () => {
                     onClick={() => handleNavigation(item.id as View)}
                     className={`h-16 flex items-center gap-2 px-4 text-sm font-medium transition-colors border-b-2 ${
                     activeView === item.id
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-slate-500 hover:text-blue-600 hover:border-blue-300'
+                        ? 'border-amber-500 text-amber-600'
+                        : 'border-transparent text-slate-500 hover:text-amber-600 hover:border-amber-300'
                     }`}
                 >
                     {item.icon}
@@ -90,7 +90,7 @@ const App: React.FC = () => {
                 aria-label={item.label}
                 className={`h-12 w-12 flex items-center justify-center rounded-lg transition-colors ${
                   activeView === item.id
-                    ? 'bg-blue-500 text-white'
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white'
                     : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >

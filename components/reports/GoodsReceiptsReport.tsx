@@ -99,30 +99,30 @@ export const GoodsReceiptsReport: React.FC<GoodsReceiptsReportProps> = ({ dataMa
 
             {!isLoading && reportData && (
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm border-collapse">
                         <thead className="text-xs text-slate-500 uppercase bg-slate-50 tracking-wider">
                             <tr>
-                                <th className="px-6 py-3 text-left">Raqam</th>
-                                <th className="px-6 py-3 text-left">Sana</th>
-                                <th className="px-6 py-3 text-left">Yetkazib beruvchi</th>
-                                <th className="px-6 py-3 text-left">Ombor</th>
+                                <th className="px-6 py-3 text-left border-r border-slate-200">Raqam</th>
+                                <th className="px-6 py-3 text-left border-r border-slate-200">Sana</th>
+                                <th className="px-6 py-3 text-left border-r border-slate-200">Yetkazib beruvchi</th>
+                                <th className="px-6 py-3 text-left border-r border-slate-200">Ombor</th>
                                 <th className="px-6 py-3 text-right">Summa</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200">
                             {reportData.map(note => (
                                 <tr key={note.id} className="hover:bg-slate-50">
-                                    <td className="px-6 py-4 font-medium text-slate-900">{note.doc_number}</td>
-                                    <td className="px-6 py-4 text-slate-600">{new Date(note.date).toLocaleDateString()}</td>
-                                    <td className="px-6 py-4 text-slate-600">{suppliers.find(s => s.id === note.supplier_id)?.name || 'Noma\'lum'}</td>
-                                    <td className="px-6 py-4 text-slate-600">{warehouses.find(w => w.id === note.warehouse_id)?.name || 'Noma\'lum'}</td>
+                                    <td className="px-6 py-4 font-medium text-slate-900 border-r border-slate-200">{note.doc_number}</td>
+                                    <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{new Date(note.date).toLocaleDateString()}</td>
+                                    <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{suppliers.find(s => s.id === note.supplier_id)?.name || 'Noma\'lum'}</td>
+                                    <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{warehouses.find(w => w.id === note.warehouse_id)?.name || 'Noma\'lum'}</td>
                                     <td className="px-6 py-4 font-mono text-right text-slate-800">{formatCurrency(getNoteTotal(note.items))}</td>
                                 </tr>
                             ))}
                         </tbody>
                         <tfoot className="bg-slate-50 font-bold">
                             <tr>
-                                <td colSpan={4} className="px-6 py-3 text-right text-slate-600">Jami:</td>
+                                <td colSpan={4} className="px-6 py-3 text-right text-slate-600 border-r border-slate-200">Jami:</td>
                                 <td className="px-6 py-3 text-right font-mono text-slate-900">{formatCurrency(totalAmount)}</td>
                             </tr>
                         </tfoot>

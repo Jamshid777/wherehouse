@@ -66,8 +66,8 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ dataManager, newDo
                     onClick={() => setActiveTab(tab.id as ActiveTab)}
                     className={`flex-shrink-0 flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
                         activeTab === tab.id
-                        ? 'border-b-2 border-blue-500 text-blue-600'
-                        : 'text-slate-500 hover:text-slate-700'
+                        ? 'border-b-2 border-amber-500 text-amber-600'
+                        : 'text-slate-500 hover:text-amber-600'
                     }`}
                 >
                     <Icon className="h-5 w-5" />

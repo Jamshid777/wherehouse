@@ -67,7 +67,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ dataManager }) => {
         <h2 className="text-2xl font-bold text-slate-800">To'lov Hujjatlari</h2>
         <button
           onClick={handleOpenModal}
-          className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2.5 rounded-lg hover:bg-blue-600 transition-colors shadow"
+          className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2.5 rounded-lg hover:from-amber-600 hover:to-amber-700 transition-all shadow"
         >
           <PlusIcon className="h-5 w-5" />
           <span>Yangi To'lov</span>
@@ -92,26 +92,26 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ dataManager }) => {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left">
+        <table className="w-full text-sm text-left border-collapse">
           <thead className="text-xs text-slate-500 uppercase bg-slate-50 tracking-wider">
             <tr>
-              <th scope="col" className="px-6 py-3">Raqam / Sana</th>
-              <th scope="col" className="px-6 py-3">Yetkazib beruvchi</th>
-              <th scope="col" className="px-6 py-3 text-right">Summa</th>
-              <th scope="col" className="px-6 py-3">To'lov usuli</th>
+              <th scope="col" className="px-6 py-3 border-r border-slate-200">Raqam / Sana</th>
+              <th scope="col" className="px-6 py-3 border-r border-slate-200">Yetkazib beruvchi</th>
+              <th scope="col" className="px-6 py-3 text-right border-r border-slate-200">Summa</th>
+              <th scope="col" className="px-6 py-3 border-r border-slate-200">To'lov usuli</th>
               <th scope="col" className="px-6 py-3">Izoh</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
             {filteredPayments.map(note => (
               <tr key={note.id} className="hover:bg-slate-50">
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-6 py-4 whitespace-nowrap border-r border-slate-200">
                   <div className="font-medium text-slate-900">{note.doc_number}</div>
                   <div className="text-xs text-slate-500">{new Date(note.date).toLocaleDateString()}</div>
                 </td>
-                <td className="px-6 py-4 text-slate-600">{suppliers.find(s => s.id === note.supplier_id)?.name || 'Noma\'lum'}</td>
-                <td className="px-6 py-4 text-right font-mono font-semibold text-slate-800">{formatCurrency(note.amount)}</td>
-                <td className="px-6 py-4 text-slate-600">{note.payment_method}</td>
+                <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{suppliers.find(s => s.id === note.supplier_id)?.name || 'Noma\'lum'}</td>
+                <td className="px-6 py-4 text-right font-mono font-semibold text-slate-800 border-r border-slate-200">{formatCurrency(note.amount)}</td>
+                <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{note.payment_method}</td>
                 <td className="px-6 py-4 text-slate-500 italic">{note.comment}</td>
               </tr>
             ))}
@@ -231,19 +231,19 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({isOpen, onClose, onS
                         </div>
                     </div>
                     <div className="overflow-y-auto max-h-48 border rounded-lg">
-                        <table className="w-full text-sm">
+                        <table className="w-full text-sm border-collapse">
                             <thead className="bg-slate-50 sticky top-0">
                                 <tr>
-                                    <th className="px-3 py-2 text-left font-medium text-slate-600">Hujjat №</th>
-                                    <th className="px-3 py-2 text-left font-medium text-slate-600">Sana</th>
+                                    <th className="px-3 py-2 text-left font-medium text-slate-600 border-r border-slate-200">Hujjat №</th>
+                                    <th className="px-3 py-2 text-left font-medium text-slate-600 border-r border-slate-200">Sana</th>
                                     <th className="px-3 py-2 text-left font-medium text-slate-600">Qarz miqdori</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {unpaidInvoices.length > 0 ? unpaidInvoices.map((inv) => (
                                     <tr key={inv.id} className="border-b last:border-0">
-                                        <td className="p-3">{inv.doc_number}</td>
-                                        <td className="p-3">{new Date(inv.date).toLocaleDateString()}</td>
+                                        <td className="p-3 border-r border-slate-200">{inv.doc_number}</td>
+                                        <td className="p-3 border-r border-slate-200">{new Date(inv.date).toLocaleDateString()}</td>
                                         <td className="p-3 font-mono">{formatCurrency(getNoteTotal(inv.items) - inv.paid_amount)}</td>
                                     </tr>
                                 )) : (
@@ -256,7 +256,7 @@ const PaymentFormModal: React.FC<PaymentFormModalProps> = ({isOpen, onClose, onS
                 
                 <div className="flex justify-end gap-3 pt-4 border-t">
                     <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">Bekor qilish</button>
-                    <button type="submit" className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">To'lovni saqlash</button>
+                    <button type="submit" className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700">To'lovni saqlash</button>
                 </div>
             </form>
         </Modal>

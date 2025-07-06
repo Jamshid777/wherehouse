@@ -13,10 +13,12 @@ import { GoodsReceiptNote } from './types';
 
 
 type View = 'products' | 'management' | 'documents' | 'reports';
+type AppMode = 'lite' | 'pro';
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>('reports');
   const [viewToOpen, setViewToOpen] = useState<{view: View, payload: any} | null>(null);
+  const [appMode, setAppMode] = useState<AppMode>('pro');
 
   const dataManager = useMockData();
 
@@ -58,53 +60,95 @@ const App: React.FC = () => {
         <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
           <div className="flex items-center">
             <h1 className="text-xl font-bold text-slate-700">Ombor Nazorati</h1>
-          </div>
-          
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center h-full">
-            <div className="flex items-baseline space-x-1">
-                {navigationItems.map(item => (
+            <div className="ml-4 flex items-center p-1 bg-slate-200/70 rounded-full text-xs font-semibold">
                 <button
-                    key={item.id}
-                    onClick={() => handleNavigation(item.id as View)}
-                    className={`h-16 flex items-center gap-2 px-4 text-sm font-medium transition-colors border-b-2 ${
-                    activeView === item.id
-                        ? 'border-amber-500 text-amber-600'
-                        : 'border-transparent text-slate-500 hover:text-amber-600 hover:border-amber-300'
+                    onClick={() => setAppMode('lite')}
+                    className={`px-3 py-1 rounded-full transition-all duration-300 ${
+                        appMode === 'lite' 
+                        ? 'bg-white text-slate-800 shadow-sm' 
+                        : 'text-slate-500 hover:text-slate-700'
                     }`}
                 >
-                    {item.icon}
-                    <span>{item.label}</span>
+                    Lite
                 </button>
-                ))}
+                <button
+                    onClick={() => setAppMode('pro')}
+                    className={`px-3 py-1 rounded-full transition-all duration-300 ${
+                        appMode === 'pro' 
+                        ? 'bg-white text-amber-600 shadow-sm' 
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                >
+                    Pro
+                </button>
             </div>
-          </nav>
+          </div>
+          
+          {appMode === 'pro' && (
+            <>
+                {/* Desktop Navigation */}
+                <nav className="hidden md:flex items-center h-full">
+                    <div className="flex items-baseline space-x-1">
+                        {navigationItems.map(item => (
+                        <button
+                            key={item.id}
+                            onClick={() => handleNavigation(item.id as View)}
+                            className={`h-16 flex items-center gap-2 px-4 text-sm font-medium transition-colors border-b-2 ${
+                            activeView === item.id
+                                ? 'border-amber-500 text-amber-600'
+                                : 'border-transparent text-slate-500 hover:text-amber-600 hover:border-amber-300'
+                            }`}
+                        >
+                            {item.icon}
+                            <span>{item.label}</span>
+                        </button>
+                        ))}
+                    </div>
+                </nav>
 
-          {/* Mobile Navigation */}
-           <nav className="flex md:hidden items-center">
-            {navigationItems.map(item => (
-              <button
-                key={item.id}
-                onClick={() => handleNavigation(item.id as View)}
-                title={item.label}
-                aria-label={item.label}
-                className={`h-12 w-12 flex items-center justify-center rounded-lg transition-colors ${
-                  activeView === item.id
-                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                {React.cloneElement(item.icon, { className: "h-6 w-6" })}
-              </button>
-            ))}
-          </nav>
+                {/* Mobile Navigation */}
+                <nav className="flex md:hidden items-center">
+                    {navigationItems.map(item => (
+                    <button
+                        key={item.id}
+                        onClick={() => handleNavigation(item.id as View)}
+                        title={item.label}
+                        aria-label={item.label}
+                        className={`h-12 w-12 flex items-center justify-center rounded-lg transition-colors ${
+                        activeView === item.id
+                            ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white'
+                            : 'text-slate-600 hover:bg-slate-100'
+                        }`}
+                    >
+                        {React.cloneElement(item.icon, { className: "h-6 w-6" })}
+                    </button>
+                    ))}
+                </nav>
+            </>
+          )}
         </div>
       </header>
 
       <main className="flex-1 overflow-y-auto">
-        <div className="p-6 lg:p-8">
-            {renderContent()}
-        </div>
+        {appMode === 'pro' ? (
+            <div className="p-6 lg:p-8">
+                {renderContent()}
+            </div>
+        ) : (
+            <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                <div className="max-w-md">
+                    <svg className="mx-auto h-16 w-16 text-amber-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.472-2.472a3.375 3.375 0 00-4.773-4.773L6.75 15.75l-2.472 2.472a3.375 3.375 0 004.773 4.773L11.42 15.17z" />
+                    </svg>
+                    <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-800 sm:text-3xl">
+                        "Lite" versiyasi tez kunda...
+                    </h2>
+                    <p className="mt-4 text-base text-slate-500">
+                        Hozirda ilovaning soddalashtirilgan va tezkor "Lite" versiyasi ustida ish olib bormoqdamiz. Ushbu versiya ishlab chiqish jarayonida. Hozircha "Pro" versiyasidan foydalanib turishingiz mumkin.
+                    </p>
+                </div>
+            </div>
+        )}
       </main>
     </div>
   );

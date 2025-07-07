@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { GoodsReceiptNote, GoodsReceiptItem, DocumentStatus, PaymentStatus, Product, Supplier, PaymentMethod } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
@@ -12,6 +13,7 @@ import { WarningIcon } from './icons/WarningIcon';
 import { ProductFormModal } from './forms/ProductFormModal';
 import { SupplierFormModal } from './forms/SupplierFormModal';
 import { CashIcon } from './icons/CashIcon';
+import { ConfirmationModal } from './ConfirmationModal';
 
 
 interface GoodsReceiptsViewProps {
@@ -19,6 +21,7 @@ interface GoodsReceiptsViewProps {
   newDocumentPayload?: { type: string, product: Product } | null;
   clearPayload?: () => void;
   defaultWarehouseId: string | null;
+  appMode: 'pro' | 'lite';
 }
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('uz-UZ').format(amount);
@@ -38,13 +41,14 @@ const getPaymentStatus = (note: GoodsReceiptNote, total: number): { status: Paym
 }
 
 
-export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManager, newDocumentPayload, clearPayload, defaultWarehouseId }) => {
+export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManager, newDocumentPayload, clearPayload, defaultWarehouseId, appMode }) => {
   const { goodsReceipts, suppliers, warehouses, products, addGoodsReceipt, updateGoodsReceipt, deleteGoodsReceipt, confirmGoodsReceipt, getNoteTotal, checkCreditLimit, addDirectPaymentForNote } = dataManager;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<GoodsReceiptNote | null>(null);
   const [productForNewNote, setProductForNewNote] = useState<Product | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [paymentModalNote, setPaymentModalNote] = useState<GoodsReceiptNote | null>(null);
+  const [noteToConfirm, setNoteToConfirm] = useState<string | null>(null);
 
 
   const [filters, setFilters] = useState({
@@ -111,13 +115,16 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
         handleCloseModal();
     };
 
-  const handleConfirm = (id: string) => {
-    if (window.confirm("Hujjatni tasdiqlamoqchimisiz? Tasdiqlangan hujjatni o'zgartirib bo'lmaydi va zaxiralar yangilanadi.")) {
-        try {
-            confirmGoodsReceipt(id);
-        } catch (error: any) {
-            alert(`Xatolik: ${error.message}`);
-        }
+  const handleConfirmClick = (id: string) => {
+    setNoteToConfirm(id);
+  }
+
+  const handleConfirm = () => {
+    if (!noteToConfirm) return;
+    try {
+        confirmGoodsReceipt(noteToConfirm);
+    } catch (error: any) {
+        alert(`Xatolik: ${error.message}`);
     }
   }
   
@@ -250,7 +257,7 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
                                 <button onClick={(e) => { e.stopPropagation(); handleDelete(note.id); }} title="O'chirish" className="p-2 rounded-full text-red-600 hover:bg-red-100 transition-colors"><TrashIcon className="h-5 w-5"/></button>
                                 <div className="relative group flex items-center">
                                   <button 
-                                    onClick={(e) => { e.stopPropagation(); handleConfirm(note.id); }} 
+                                    onClick={(e) => { e.stopPropagation(); handleConfirmClick(note.id); }} 
                                     className="px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-md hover:bg-green-600 transition-colors disabled:bg-green-300 disabled:cursor-not-allowed"
                                     disabled={creditCheck.exceeds}
                                   >
@@ -285,6 +292,8 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
                                         <thead>
                                             <tr className="border-b">
                                                 <th className="p-2 text-left font-medium border-r border-slate-200">Mahsulot</th>
+                                                {appMode === 'pro' && <th className="p-2 text-left font-medium border-r border-slate-200">Partiya №</th>}
+                                                {appMode === 'pro' && <th className="p-2 text-left font-medium border-r border-slate-200">Yaroqlilik muddati</th>}
                                                 <th className="p-2 text-right font-medium border-r border-slate-200">Miqdor</th>
                                                 <th className="p-2 text-right font-medium border-r border-slate-200">Narx</th>
                                                 <th className="p-2 text-right font-medium">Summa</th>
@@ -294,6 +303,8 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
                                         {note.items.map((item, index) => (
                                             <tr key={index} className="border-b last:border-b-0">
                                                 <td className="p-2 border-r border-slate-200">{products.find(p => p.id === item.productId)?.name || 'Noma\'lum'}</td>
+                                                {appMode === 'pro' && <td className="p-2 font-mono text-xs border-r border-slate-200">{item.batchId}</td>}
+                                                {appMode === 'pro' && <td className="p-2 border-r border-slate-200">{new Date(item.validDate).toLocaleDateString()}</td>}
                                                 <td className="p-2 text-right font-mono border-r border-slate-200">{item.quantity}</td>
                                                 <td className="p-2 text-right font-mono border-r border-slate-200">{formatCurrency(item.price)}</td>
                                                 <td className="p-2 text-right font-mono">{formatCurrency(item.price * item.quantity)}</td>
@@ -302,7 +313,7 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
                                         </tbody>
                                          <tfoot className="bg-slate-50 font-semibold">
                                             <tr>
-                                                <td colSpan={3} className="p-2 text-right border-r border-slate-200">Jami:</td>
+                                                <td colSpan={appMode === 'pro' ? 5 : 3} className="p-2 text-right border-r border-slate-200">Jami:</td>
                                                 <td className="p-2 text-right font-mono">{formatCurrency(getNoteTotal(note.items))}</td>
                                             </tr>
                                         </tfoot>
@@ -331,6 +342,7 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
         productForNewNote={productForNewNote}
         dataManager={dataManager}
         defaultWarehouseId={defaultWarehouseId}
+        appMode={appMode}
       />
       <DebtPaymentModal
         isOpen={!!paymentModalNote}
@@ -338,6 +350,14 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
         onClose={() => setPaymentModalNote(null)}
         onSubmit={handlePaymentSubmit}
         getNoteTotal={getNoteTotal}
+      />
+      <ConfirmationModal
+        isOpen={!!noteToConfirm}
+        onClose={() => setNoteToConfirm(null)}
+        onConfirm={handleConfirm}
+        title="Hujjatni tasdiqlash"
+        message={<>Hujjatni tasdiqlamoqchimisiz? <br/> Tasdiqlangan hujjatni o'zgartirib bo'lmaydi va zaxiralar yangilanadi.</>}
+        confirmButtonText="Ha, tasdiqlash"
       />
     </div>
   );
@@ -452,13 +472,9 @@ interface GoodsReceiptFormModalProps {
   productForNewNote: Product | null;
   dataManager: UseMockDataReturnType;
   defaultWarehouseId: string | null;
+  appMode: 'pro' | 'lite';
 }
 
-type FormItem = {
-    productId: string;
-    quantity: number;
-    price: number;
-}
 
 const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
   isOpen,
@@ -468,6 +484,7 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
   productForNewNote,
   dataManager,
   defaultWarehouseId,
+  appMode,
 }) => {
   const { products, warehouses, suppliers, addProduct, addSupplier, updateSupplier, isInnUnique } = dataManager;
   
@@ -477,7 +494,7 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
     warehouse_id: '',
     paid_amount: 0,
   });
-  const [items, setItems] = useState<FormItem[]>([]);
+  const [items, setItems] = useState<GoodsReceiptItem[]>([]);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
 
@@ -492,20 +509,29 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
         });
         setItems(note.items.map(item => ({...item})));
       } else {
+        const defaultDate = new Date();
+        const validDate = new Date();
+        validDate.setMonth(validDate.getMonth() + 6);
+
         // Reset form for a new note
         const warehouseToSet = defaultWarehouseId || warehouses.find(w => w.is_active)?.id;
         setFormData({
-          date: new Date().toISOString().split('T')[0],
+          date: formatDate(defaultDate),
           supplier_id: suppliers.length > 0 ? suppliers[0].id : '',
           warehouse_id: warehouseToSet || '',
           paid_amount: 0,
         });
-        // If a product is passed for a quick receipt, add it to items
+        const newItem: GoodsReceiptItem = { 
+            productId: '', 
+            quantity: 1, 
+            price: 0, 
+            batchId: `b-${Date.now()}-0`,
+            validDate: formatDate(validDate)
+        };
         if (productForNewNote) {
-            setItems([{ productId: productForNewNote.id, quantity: 1, price: 0 }]);
-        } else {
-            setItems([{ productId: '', quantity: 1, price: 0 }]);
+            newItem.productId = productForNewNote.id;
         }
+        setItems([newItem]);
       }
     }
   }, [note, productForNewNote, isOpen, warehouses, suppliers, defaultWarehouseId]);
@@ -518,7 +544,7 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
     }));
   };
 
-  const handleItemChange = (index: number, field: keyof FormItem, value: any) => {
+  const handleItemChange = (index: number, field: keyof GoodsReceiptItem, value: any) => {
     const newItems = [...items];
     const currentItem = newItems[index];
     
@@ -527,16 +553,26 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
             setIsProductModalOpen(true);
             return;
         }
-        currentItem.productId = value;
+        (currentItem as any)[field] = value;
+    } else if (field === 'validDate') {
+        (currentItem as any)[field] = value;
     } else {
-        (currentItem[field] as any) = parseFloat(value) || 0;
+        (currentItem as any)[field] = parseFloat(value) || 0;
     }
     
     setItems(newItems);
   };
   
   const handleAddItem = () => {
-    setItems([...items, { productId: '', quantity: 1, price: 0 }]);
+    const validDate = new Date();
+    validDate.setMonth(validDate.getMonth() + 6);
+    setItems([...items, { 
+        productId: '', 
+        quantity: 1, 
+        price: 0,
+        batchId: `b-${Date.now()}-${items.length}`,
+        validDate: formatDate(validDate)
+    }]);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -546,10 +582,24 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if(items.some(item => !item.productId || item.quantity <= 0 || item.price < 0)) {
-        alert("Iltimos, har bir qatorda mahsulotni tanlang va miqdor hamda narxni to'g'ri kiriting.");
+        alert("Iltimos, har bir qatorda mahsulotni tanlang va miqdor, narxni to'g'ri kiriting.");
         return;
     }
-    onSubmit({ ...formData, date: new Date(formData.date).toISOString(), items });
+    // If in lite mode, ensure validDate is set
+    const finalItems = items.map(item => {
+        if (appMode === 'lite' && !item.validDate) {
+            const validDate = new Date();
+            validDate.setFullYear(validDate.getFullYear() + 1);
+            return { ...item, validDate: formatDate(validDate) };
+        }
+        return item;
+    });
+
+    if (appMode === 'pro' && finalItems.some(item => !item.validDate)) {
+        alert("Iltimos, har bir mahsulot uchun yaroqlilik muddatini kiriting.");
+        return;
+    }
+    onSubmit({ ...formData, date: new Date(formData.date).toISOString(), items: finalItems });
   };
   
   const totalAmount = useMemo(() => {
@@ -622,9 +672,10 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
               <table className="w-full text-sm border-collapse">
                 <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-2 py-2 text-left font-medium text-slate-600" style={{width: '50%'}}>Mahsulot</th>
+                    <th className="px-2 py-2 text-left font-medium text-slate-600" style={{width: appMode === 'pro' ? '35%' : '50%'}}>Mahsulot</th>
                     <th className="px-2 py-2 text-left font-medium text-slate-600">Miqdor</th>
                     <th className="px-2 py-2 text-left font-medium text-slate-600">Narx</th>
+                    {appMode === 'pro' && <th className="px-2 py-2 text-left font-medium text-slate-600">Yaroqlilik mudd.</th>}
                     <th className="px-2 py-2 text-left font-medium text-slate-600">Summa</th>
                     <th className="px-2 py-2"></th>
                   </tr>
@@ -645,6 +696,7 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                       </td>
                       <td className="p-1"><input type="number" value={item.quantity} onChange={e => handleItemChange(index, 'quantity', e.target.value)} min="0.01" step="any" className="w-full px-3 py-2 border border-slate-300 rounded-md" required /></td>
                       <td className="p-1"><input type="number" value={item.price} onChange={e => handleItemChange(index, 'price', e.target.value)} min="0" step="any" className="w-full px-3 py-2 border border-slate-300 rounded-md" required /></td>
+                      {appMode === 'pro' && <td className="p-1"><input type="date" value={item.validDate} onChange={e => handleItemChange(index, 'validDate', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md" required /></td>}
                       <td className="p-1 font-mono">{formatCurrency(item.quantity * item.price)}</td>
                       <td className="p-1 text-center">
                         <button type="button" onClick={() => handleRemoveItem(index)} className="text-red-500 hover:text-red-700 p-2"><TrashIcon className="h-5 w-5"/></button>

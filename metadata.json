@@ -1,6 +1,6 @@
 {
-  "name": "Copy of PRO-LITE(without  batch_id ; valid_date)",
-  "description": "Mahsulotlar, omborlar, yetkazib beruvchilar va hujjatlarni (kirim, chiqim, ko'chirish, inventarizatsiya) boshqarish uchun professional veb-ilova. Bu tizim ombor operatsiyalarini samarali yuritishga yordam beradi.",
+  "name": "Copy of Ustun ombor",
+  "description": "Mahsulotlar, omborlar va hujjatlarni boshqarish uchun professional veb-ilova. 'Pro' rejimi (partiyalar, FIFO) va soddalashtirilgan 'Lite' rejimini qo'llab-quvvatlaydi.",
   "requestFramePermissions": [],
   "prompt": ""
 }

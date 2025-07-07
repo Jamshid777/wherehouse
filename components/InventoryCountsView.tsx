@@ -4,6 +4,8 @@ import { InventoryNote, InventoryItem, DocumentStatus, Stock } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
 import { Modal } from './Modal';
 import { PlusIcon } from './icons/PlusIcon';
+import { EditIcon } from './icons/EditIcon';
+import { ConfirmationModal } from './ConfirmationModal';
 
 interface InventoryCountsViewProps {
   dataManager: UseMockDataReturnType;
@@ -13,8 +15,10 @@ interface InventoryCountsViewProps {
 const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
 export const InventoryCountsView: React.FC<InventoryCountsViewProps> = ({ dataManager, defaultWarehouseId }) => {
-  const { inventoryNotes, warehouses, addInventoryNote, confirmInventoryNote } = dataManager;
+  const { inventoryNotes, warehouses, addInventoryNote, updateInventoryNote, confirmInventoryNote } = dataManager;
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingNote, setEditingNote] = useState<InventoryNote | null>(null);
+  const [noteToConfirm, setNoteToConfirm] = useState<string | null>(null);
 
   const [filters, setFilters] = useState({
     dateFrom: formatDate(new Date(new Date().setDate(new Date().getDate() - 30))),
@@ -52,26 +56,39 @@ export const InventoryCountsView: React.FC<InventoryCountsViewProps> = ({ dataMa
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [inventoryNotes, filters]);
   
-  const handleOpenModal = () => setIsModalOpen(true);
-  const handleCloseModal = () => setIsModalOpen(false);
+  const handleOpenModal = (note: InventoryNote | null = null) => {
+    setEditingNote(note);
+    setIsModalOpen(true);
+  };
+  const handleCloseModal = () => {
+    setEditingNote(null);
+    setIsModalOpen(false);
+  };
 
-  const handleSubmit = (formData: Omit<InventoryNote, 'id' | 'status' | 'doc_number'>) => {
-    addInventoryNote(formData);
+  const handleSubmit = (formData: Omit<InventoryNote, 'id' | 'status' | 'doc_number'> | InventoryNote) => {
+    if ('id' in formData) {
+      updateInventoryNote(formData as InventoryNote);
+    } else {
+      addInventoryNote(formData as Omit<InventoryNote, 'id' | 'status' | 'doc_number'>);
+    }
     handleCloseModal();
   };
   
-  const handleConfirm = (id: string) => {
-    if (window.confirm("Hujjatni tasdiqlamoqchimisiz? Tizim kamomad va ortiqchalar uchun avtomatik hujjatlar yaratadi.")) {
-        confirmInventoryNote(id);
-    }
-  }
+  const handleConfirmClick = (id: string) => {
+    setNoteToConfirm(id);
+  };
+
+  const handleConfirm = () => {
+    if (!noteToConfirm) return;
+    confirmInventoryNote(noteToConfirm);
+  };
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-md">
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <h2 className="text-2xl font-bold text-slate-800">Inventarizatsiya Hujjatlari</h2>
         <button
-          onClick={handleOpenModal}
+          onClick={() => handleOpenModal()}
           className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2.5 rounded-lg hover:from-amber-600 hover:to-amber-700 transition-all shadow"
         >
           <PlusIcon className="h-5 w-5" />
@@ -121,7 +138,10 @@ export const InventoryCountsView: React.FC<InventoryCountsViewProps> = ({ dataMa
                 </td>
                 <td className="px-6 py-4 text-center">
                   {note.status === DocumentStatus.DRAFT && (
-                    <button onClick={() => handleConfirm(note.id)} className="px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded hover:bg-green-600 transition-colors">Tasdiqlash</button>
+                    <div className="flex justify-center items-center gap-2">
+                        <button onClick={() => handleOpenModal(note)} title="Tahrirlash" className="p-2 rounded-full text-amber-600 hover:bg-amber-100 transition-colors"><EditIcon className="h-5 w-5"/></button>
+                        <button onClick={() => handleConfirmClick(note.id)} className="px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-md hover:bg-green-600 transition-colors">Tasdiqlash</button>
+                    </div>
                   )}
                 </td>
               </tr>
@@ -137,8 +157,17 @@ export const InventoryCountsView: React.FC<InventoryCountsViewProps> = ({ dataMa
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onSubmit={handleSubmit}
+        note={editingNote}
         dataManager={dataManager}
         defaultWarehouseId={defaultWarehouseId}
+      />
+      <ConfirmationModal
+        isOpen={!!noteToConfirm}
+        onClose={() => setNoteToConfirm(null)}
+        onConfirm={handleConfirm}
+        title="Inventarizatsiyani tasdiqlash"
+        message={<>Hujjatni tasdiqlamoqchimisiz? <br/> Tizim kamomad va ortiqchalar uchun avtomatik hujjatlar yaratadi.</>}
+        confirmButtonText="Ha, tasdiqlash"
       />
     </div>
   );
@@ -148,23 +177,34 @@ export const InventoryCountsView: React.FC<InventoryCountsViewProps> = ({ dataMa
 interface InventoryFormModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: Omit<InventoryNote, 'id' | 'status' | 'doc_number'>) => void;
+    onSubmit: (data: Omit<InventoryNote, 'id' | 'status' | 'doc_number'> | InventoryNote) => void;
+    note: InventoryNote | null;
     dataManager: UseMockDataReturnType;
     defaultWarehouseId: string | null;
 }
 
-const InventoryFormModal: React.FC<InventoryFormModalProps> = ({isOpen, onClose, onSubmit, dataManager, defaultWarehouseId}) => {
+const InventoryFormModal: React.FC<InventoryFormModalProps> = ({isOpen, onClose, onSubmit, note, dataManager, defaultWarehouseId}) => {
     const { products, warehouses, stock, getTotalStockQuantity } = dataManager;
     const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], warehouse_id: '' });
     const [items, setItems] = useState<Omit<InventoryItem, 'difference'>[]>([]);
 
     useEffect(() => {
         if(isOpen) {
-            const warehouseToSet = defaultWarehouseId || warehouses.find(w => w.is_active)?.id || '';
-            setFormData({ date: new Date().toISOString().split('T')[0], warehouse_id: warehouseToSet });
-            setItems([]);
+            if (note) {
+                 setFormData({ date: new Date(note.date).toISOString().split('T')[0], warehouse_id: note.warehouse_id });
+                 const prefilledItems = note.items.map(item => ({
+                    productId: item.productId,
+                    planned_quantity: item.planned_quantity,
+                    real_quantity: item.real_quantity,
+                }));
+                setItems(prefilledItems);
+            } else {
+                const warehouseToSet = defaultWarehouseId || warehouses.find(w => w.is_active)?.id || '';
+                setFormData({ date: new Date().toISOString().split('T')[0], warehouse_id: warehouseToSet });
+                setItems([]);
+            }
         }
-    }, [isOpen, warehouses, defaultWarehouseId]);
+    }, [isOpen, note, warehouses, defaultWarehouseId]);
 
     const handleLoadStock = () => {
         if (!formData.warehouse_id) {
@@ -202,13 +242,18 @@ const InventoryFormModal: React.FC<InventoryFormModalProps> = ({isOpen, onClose,
             return;
         }
 
-        onSubmit({ ...formData, date: new Date(formData.date).toISOString(), items: finalItems });
+        const dataToSubmit = { ...formData, date: new Date(formData.date).toISOString(), items: finalItems };
+        if (note) {
+            onSubmit({ ...note, ...dataToSubmit });
+        } else {
+            onSubmit(dataToSubmit);
+        }
     }
     
     const getProductInfo = (productId: string) => products.find(p => p.id === productId);
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={"Yangi inventarizatsiya"} size="5xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={note ? "Inventarizatsiyani tahrirlash" : "Yangi inventarizatsiya"} size="5xl">
             <form onSubmit={handleFormSubmit} className="space-y-6">
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                     <div>
@@ -266,7 +311,7 @@ const InventoryFormModal: React.FC<InventoryFormModalProps> = ({isOpen, onClose,
                 
                 <div className="flex justify-end gap-3 pt-4 border-t">
                     <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">Bekor qilish</button>
-                    <button type="submit" className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700">Hujjatni yaratish</button>
+                    <button type="submit" className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700">Saqlash</button>
                 </div>
             </form>
         </Modal>

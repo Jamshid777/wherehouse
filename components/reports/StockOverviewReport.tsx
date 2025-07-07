@@ -1,14 +1,18 @@
 
+
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { UseMockDataReturnType } from '../../hooks/useMockData';
 import { Product, Warehouse, Stock, Unit } from '../../types';
 import { SearchIcon } from '../icons/SearchIcon';
 import { PlusIcon } from '../icons/PlusIcon';
+import { ChevronDownIcon } from '../icons/ChevronDownIcon';
 
 interface StockOverviewReportProps {
     dataManager: UseMockDataReturnType;
     navigate: (view: 'documents', payload: any) => void;
     defaultWarehouseId: string | null;
+    appMode: 'pro' | 'lite';
 }
 
 // Helpers
@@ -21,10 +25,19 @@ interface LowStockProduct {
     difference: number;
 }
 
-export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataManager, navigate, defaultWarehouseId }) => {
+interface GroupedStockData {
+    product: Product;
+    warehouse: Warehouse;
+    totalQty: number;
+    totalValue: number;
+    batches: Stock[];
+}
+
+export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataManager, navigate, defaultWarehouseId, appMode }) => {
     const [balanceData, setBalanceData] = useState<Stock[] | null>(null);
     const [lowStockReportData, setLowStockReportData] = useState<LowStockProduct[] | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
     const [filters, setFilters] = useState({
         asOfDate: formatDate(new Date()),
@@ -40,6 +53,18 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
     const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFilters(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleToggleExpand = (key: string) => {
+        setExpandedRows(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(key)) {
+                newSet.delete(key);
+            } else {
+                newSet.add(key);
+            }
+            return newSet;
+        });
     };
 
     const balanceCategories = useMemo(() => {
@@ -85,7 +110,7 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
     const balanceGroupedData = useMemo(() => {
         if (!balanceData) return [];
         
-        const grouped = new Map<string, {product: Product, warehouse: Warehouse, totalQty: number, totalValue: number}>();
+        const grouped = new Map<string, GroupedStockData>();
         
         balanceData.forEach(stockItem => {
             if (filters.warehouseId !== 'all' && stockItem.warehouseId !== filters.warehouseId) return;
@@ -98,12 +123,21 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
             if (!product.name.toLowerCase().includes(filters.searchTerm.toLowerCase())) return;
 
             const key = `${product.id}_${warehouse.id}`;
-            grouped.set(key, { 
-                product, 
-                warehouse, 
-                totalQty: stockItem.quantity,
-                totalValue: stockItem.quantity * stockItem.average_cost
-            });
+            const existing = grouped.get(key);
+
+            if (existing) {
+                existing.totalQty += stockItem.quantity;
+                existing.totalValue += stockItem.quantity * stockItem.cost;
+                existing.batches.push(stockItem);
+            } else {
+                grouped.set(key, {
+                    product,
+                    warehouse,
+                    totalQty: stockItem.quantity,
+                    totalValue: stockItem.quantity * stockItem.cost,
+                    batches: [stockItem]
+                });
+            }
         });
         
         return Array.from(grouped.values()).sort((a,b) => a.product.name.localeCompare(b.product.name));
@@ -131,7 +165,7 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
         <div className="space-y-8">
             <div className="bg-white p-6 rounded-xl shadow-md">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-                    <h2 className="text-2xl font-bold text-slate-800">Balans Hisoboti</h2>
+                    <h2 className="text-2xl font-bold text-slate-800">Balans Hisoboti {appMode === 'pro' && '(Partiyalar bo\'yicha)'}</h2>
                     <div className="flex flex-wrap items-center gap-4">
                          <div className="relative">
                             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -181,31 +215,69 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
                                     <tr>
                                         <th className="px-4 py-3 text-left font-medium border-r border-slate-200">Mahsulot / Ombor</th>
                                         <th className="px-4 py-3 text-left font-medium border-r border-slate-200">Kategoriya</th>
-                                        <th className="px-4 py-3 text-right font-medium border-r border-slate-200">Miqdor</th>
-                                        <th className="px-4 py-3 text-right font-medium border-r border-slate-200">Tannarx (O'rtacha)</th>
+                                        <th className="px-4 py-3 text-right font-medium border-r border-slate-200">Jami Miqdor</th>
+                                        <th className="px-4 py-3 text-right font-medium border-r border-slate-200">O'rtacha Tannarx</th>
                                         <th className="px-4 py-3 text-right font-medium border-r border-slate-200">Jami Summa</th>
                                         <th className="px-4 py-3 text-center font-medium"></th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-200">
-                                    {balanceGroupedData.length > 0 ? balanceGroupedData.map(({ product, warehouse, totalQty, totalValue }) => {
+                                <tbody>
+                                    {balanceGroupedData.length > 0 ? balanceGroupedData.map((data) => {
+                                        const { product, warehouse, totalQty, totalValue, batches } = data;
                                         const key = `${product.id}-${warehouse.id}`;
                                         const avgCost = totalQty > 0 ? totalValue / totalQty : 0;
+                                        const isExpanded = expandedRows.has(key);
                                         return (
-                                            <tr key={key} className="hover:bg-slate-50">
-                                                <td className="px-4 py-3 font-medium text-slate-900 border-r border-slate-200">
-                                                    <div>{product.name}<span className="ml-2 text-xs text-slate-500 font-normal">({warehouse.name})</span></div>
-                                                </td>
-                                                <td className="px-4 py-3 text-slate-600 border-r border-slate-200">{product.category}</td>
-                                                <td className="px-4 py-3 text-right font-mono font-semibold text-slate-800 border-r border-slate-200">{totalQty.toFixed(2)} <span className="text-xs text-slate-500">{product.unit}</span></td>
-                                                <td className="px-4 py-3 text-right font-mono text-slate-600 border-r border-slate-200">{formatCurrency(avgCost)}</td>
-                                                <td className="px-4 py-3 text-right font-mono font-bold text-slate-800 border-r border-slate-200">{formatCurrency(totalValue)}</td>
-                                                <td className="px-4 py-3 text-center">
-                                                    <button onClick={(e) => { e.stopPropagation(); handleQuickReceipt(product); }} title="Tezkor kirim" className="p-1.5 rounded-full text-amber-600 hover:bg-amber-100 transition-colors">
-                                                        <PlusIcon className="h-5 w-5" />
-                                                    </button>
-                                                </td>
-                                            </tr>
+                                            <React.Fragment key={key}>
+                                                <tr onClick={() => appMode === 'pro' && handleToggleExpand(key)} className={`hover:bg-slate-50 border-t ${appMode === 'pro' ? 'cursor-pointer' : ''}`}>
+                                                    <td className="px-4 py-3 font-medium text-slate-900 border-r border-slate-200">
+                                                        <div className="flex items-center gap-2">
+                                                            {appMode === 'pro' && <ChevronDownIcon className={`h-4 w-4 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />}
+                                                            {product.name}<span className="ml-2 text-xs text-slate-500 font-normal">({warehouse.name})</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-slate-600 border-r border-slate-200">{product.category}</td>
+                                                    <td className="px-4 py-3 text-right font-mono font-semibold text-slate-800 border-r border-slate-200">{totalQty.toFixed(2)} <span className="text-xs text-slate-500">{product.unit}</span></td>
+                                                    <td className="px-4 py-3 text-right font-mono text-slate-600 border-r border-slate-200">{formatCurrency(avgCost)}</td>
+                                                    <td className="px-4 py-3 text-right font-mono font-bold text-slate-800 border-r border-slate-200">{formatCurrency(totalValue)}</td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <button onClick={(e) => { e.stopPropagation(); handleQuickReceipt(product); }} title="Tezkor kirim" className="p-1.5 rounded-full text-amber-600 hover:bg-amber-100 transition-colors">
+                                                            <PlusIcon className="h-5 w-5" />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                {isExpanded && appMode === 'pro' && (
+                                                    <tr className="bg-slate-50/50">
+                                                        <td colSpan={6} className="p-2">
+                                                            <div className="p-2 bg-white rounded-md border">
+                                                                <h4 className="text-xs font-semibold mb-1 px-2 text-slate-600">Partiyalar ({product.name})</h4>
+                                                                <table className="w-full text-xs">
+                                                                    <thead className="text-slate-500">
+                                                                        <tr>
+                                                                            <th className="px-2 py-1 text-left border-r">Partiya №</th>
+                                                                            <th className="px-2 py-1 text-left border-r">Kirim sanasi</th>
+                                                                            <th className="px-2 py-1 text-left border-r">Yaroqlilik mudd.</th>
+                                                                            <th className="px-2 py-1 text-right border-r">Qoldiq</th>
+                                                                            <th className="px-2 py-1 text-right">Tannarx</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {batches.sort((a,b) => new Date(a.receiptDate).getTime() - new Date(b.receiptDate).getTime()).map(batch => (
+                                                                            <tr key={batch.batchId} className="border-t">
+                                                                                <td className="px-2 py-1.5 font-mono border-r">{batch.batchId}</td>
+                                                                                <td className="px-2 py-1.5 border-r">{new Date(batch.receiptDate).toLocaleDateString()}</td>
+                                                                                <td className="px-2 py-1.5 border-r">{batch.validDate ? new Date(batch.validDate).toLocaleDateString() : 'N/A'}</td>
+                                                                                <td className="px-2 py-1.5 text-right font-mono border-r">{batch.quantity.toFixed(2)}</td>
+                                                                                <td className="px-2 py-1.5 text-right font-mono">{formatCurrency(batch.cost)}</td>
+                                                                            </tr>
+                                                                        ))}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
                                         );
                                     }) : (
                                         <tr><td colSpan={6} className="text-center py-10 text-slate-500">Ma'lumot topilmadi.</td></tr>

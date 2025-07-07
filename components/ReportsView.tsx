@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { UseMockDataReturnType } from '../hooks/useMockData';
 import { TurnoverStatementReport } from './reports/TurnoverStatementReport';
@@ -16,6 +17,7 @@ interface ReportsViewProps {
   dataManager: UseMockDataReturnType;
   navigate: (view: 'documents', payload: any) => void;
   defaultWarehouseId: string | null;
+  appMode: 'pro' | 'lite';
 }
 
 type ActiveTab = 'critical_stock' | 'turnover' | 'receipts' | 'supplier_balance' | 'aging';
@@ -28,15 +30,15 @@ const tabs = [
     { id: 'aging', label: 'Qarzdorlik Muddati', icon: ClockIcon },
 ];
 
-export const ReportsView: React.FC<ReportsViewProps> = ({ dataManager, navigate, defaultWarehouseId }) => {
+export const ReportsView: React.FC<ReportsViewProps> = ({ dataManager, navigate, defaultWarehouseId, appMode }) => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('critical_stock');
 
   const renderContent = () => {
     switch (activeTab) {
       case 'critical_stock':
-        return <StockOverviewReport dataManager={dataManager} navigate={navigate} defaultWarehouseId={defaultWarehouseId} />;
+        return <StockOverviewReport dataManager={dataManager} navigate={navigate} defaultWarehouseId={defaultWarehouseId} appMode={appMode} />;
       case 'turnover':
-        return <TurnoverStatementReport dataManager={dataManager} defaultWarehouseId={defaultWarehouseId} />;
+        return <TurnoverStatementReport dataManager={dataManager} defaultWarehouseId={defaultWarehouseId} appMode={appMode} />;
       case 'receipts':
         return <GoodsReceiptsReport dataManager={dataManager} defaultWarehouseId={defaultWarehouseId} />;
       case 'supplier_balance':

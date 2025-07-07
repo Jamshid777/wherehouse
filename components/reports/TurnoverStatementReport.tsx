@@ -1,23 +1,26 @@
 
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { UseMockDataReturnType } from '../../hooks/useMockData';
-import { Product, Warehouse, DocumentStatus, GoodsReceiptItem, InternalTransferItem, WriteOffItem, Stock } from '../../types';
+import { Product, Warehouse, DocumentStatus, GoodsReceiptItem, InternalTransferItem, WriteOffItem, Stock, GoodsReturnItem, GoodsReturnNote, WriteOffNote, InternalTransferNote, GoodsReceiptNote } from '../../types';
 import { ChevronDownIcon } from '../icons/ChevronDownIcon';
 import { ReceiptIcon } from '../icons/ReceiptIcon';
 import { WriteOffIcon } from '../icons/WriteOffIcon';
 import { TransferIcon } from '../icons/TransferIcon';
+import { ReturnIcon } from '../icons/ReturnIcon';
 
 
 interface TurnoverStatementReportProps {
     dataManager: UseMockDataReturnType;
     defaultWarehouseId: string | null;
+    appMode: 'pro' | 'lite';
 }
 
 type TransactionDetail = {
     date: string;
     docNumber: string;
-    docType: 'receipt' | 'writeoff' | 'transfer-in' | 'transfer-out';
+    docType: 'receipt' | 'writeoff' | 'transfer-in' | 'transfer-out' | 'return';
     warehouseName: string;
     qtyChange: number;
     valueChange: number;
@@ -39,7 +42,7 @@ interface TurnoverData {
 const formatCurrency = (amount: number) => new Intl.NumberFormat('uz-UZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
 const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
-export const TurnoverStatementReport: React.FC<TurnoverStatementReportProps> = ({ dataManager, defaultWarehouseId }) => {
+export const TurnoverStatementReport: React.FC<TurnoverStatementReportProps> = ({ dataManager, defaultWarehouseId, appMode }) => {
     const [reportData, setReportData] = useState<TurnoverData[] | null>(null);
     const [filters, setFilters] = useState({
         dateFrom: formatDate(new Date(new Date().setDate(new Date().getDate() - 7))),
@@ -81,15 +84,7 @@ export const TurnoverStatementReport: React.FC<TurnoverStatementReportProps> = (
         startDate.setHours(0,0,0,0);
         const endDate = new Date(dateTo);
         endDate.setHours(23,59,59,999);
-        const { products, goodsReceipts, writeOffs, internalTransfers, warehouses, getStockAsOf } = dataManager;
-
-        const allDocs = [
-            ...goodsReceipts.map(d => ({ ...d, docType: 'receipt' as const, date: new Date(d.date) })),
-            ...writeOffs.map(d => ({ ...d, docType: 'writeoff' as const, date: new Date(d.date) })),
-            ...internalTransfers.map(d => ({ ...d, docType: 'transfer' as const, date: new Date(d.date) }))
-        ]
-        .filter(d => d.status === DocumentStatus.CONFIRMED)
-        .sort((a, b) => a.date.getTime() - b.date.getTime());
+        const { products, goodsReceipts, writeOffs, internalTransfers, goodsReturns, warehouses, getStockAsOf } = dataManager;
 
         const turnoverResult: Map<string, TurnoverData> = new Map();
         products.forEach(p => {
@@ -100,7 +95,6 @@ export const TurnoverStatementReport: React.FC<TurnoverStatementReportProps> = (
             });
         });
 
-        // 1. Calculate opening balance using getStockAsOf
         const openingStockDate = new Date(startDate);
         openingStockDate.setDate(startDate.getDate() - 1);
         const openingStock = getStockAsOf(openingStockDate.toISOString());
@@ -109,86 +103,106 @@ export const TurnoverStatementReport: React.FC<TurnoverStatementReportProps> = (
             const turnoverData = turnoverResult.get(stockItem.productId);
             if(turnoverData && (warehouseId === 'all' || stockItem.warehouseId === warehouseId)) {
                 turnoverData.opening_qty += stockItem.quantity;
-                turnoverData.opening_value += stockItem.quantity * stockItem.average_cost;
+                turnoverData.opening_value += stockItem.quantity * stockItem.cost;
             }
         });
 
-
-        // 2. Calculate turnover for the period
-        const runningStockState = new Map<string, {qty: number, avg_cost: number}>(
-            openingStock.map(s => [`${s.productId}-${s.warehouseId}`, {qty: s.quantity, avg_cost: s.average_cost}])
-        );
-
-        const docsDuring = allDocs.filter(d => d.date >= startDate && d.date <= endDate);
-
-        docsDuring.forEach(doc => {
-            const getWarehouseName = (id:string) => warehouses.find(w=>w.id===id)?.name || 'Noma\'lum';
-            switch(doc.docType) {
-                case 'receipt':
-                    doc.items.forEach(item => {
-                        // Update running state for cost calculation
-                        const key = `${item.productId}-${doc.warehouse_id}`;
-                        let current = runningStockState.get(key) || { qty: 0, avg_cost: 0 };
-                        const newTotalQty = current.qty + item.quantity;
-                        current.avg_cost = newTotalQty > 0 ? ((current.qty * current.avg_cost) + (item.quantity * item.price)) / newTotalQty : 0;
-                        current.qty = newTotalQty;
-                        runningStockState.set(key, current);
-                        
-                        // Update report if warehouse matches filter
-                        if (warehouseId === 'all' || doc.warehouse_id === warehouseId) {
-                            const pTurnover = turnoverResult.get(item.productId)!;
-                            pTurnover.debit_qty += item.quantity;
-                            pTurnover.debit_value += item.quantity * item.price;
-                            pTurnover.details.push({ date: doc.date.toISOString(), docNumber: doc.doc_number, docType: 'receipt', warehouseName: getWarehouseName(doc.warehouse_id), qtyChange: item.quantity, valueChange: item.quantity * item.price });
-                        }
+        let periodStock: Stock[] = JSON.parse(JSON.stringify(openingStock));
+        
+        const allDocs = [
+            ...goodsReceipts.map(d => ({ ...d, docType: 'receipt' as const, date: new Date(d.date) })),
+            ...writeOffs.map(d => ({ ...d, docType: 'writeoff' as const, date: new Date(d.date) })),
+            ...internalTransfers.map(d => ({ ...d, docType: 'transfer' as const, date: new Date(d.date) })),
+            ...goodsReturns.map(d => ({ ...d, docType: 'return' as const, date: new Date(d.date) }))
+        ]
+        .filter(d => d.status === DocumentStatus.CONFIRMED && new Date(d.date) >= startDate && new Date(d.date) <= endDate)
+        .sort((a, b) => a.date.getTime() - b.date.getTime());
+        
+        const getWarehouseName = (id:string) => warehouses.find(w=>w.id===id)?.name || 'Noma\'lum';
+        
+        for (const doc of allDocs) {
+            if (doc.docType === 'receipt') {
+                doc.items.forEach(item => {
+                    periodStock.push({
+                        batchId: item.batchId,
+                        productId: item.productId,
+                        warehouseId: doc.warehouse_id,
+                        quantity: item.quantity,
+                        cost: item.price,
+                        receiptDate: doc.date.toISOString(),
+                        validDate: item.validDate
                     });
-                    break;
-                case 'writeoff':
-                     doc.items.forEach(item => {
-                        const key = `${item.productId}-${doc.warehouse_id}`;
-                        let current = runningStockState.get(key);
-                        if(current) current.qty -= item.quantity;
-
-                        if (warehouseId === 'all' || doc.warehouse_id === warehouseId) {
-                            const pTurnover = turnoverResult.get(item.productId)!;
-                            pTurnover.credit_qty += item.quantity;
-                            pTurnover.credit_value += item.quantity * item.cost;
-                            pTurnover.details.push({ date: doc.date.toISOString(), docNumber: doc.doc_number, docType: 'writeoff', warehouseName: getWarehouseName(doc.warehouse_id), qtyChange: -item.quantity, valueChange: -item.quantity * item.cost });
-                        }
-                    });
-                    break;
-                case 'transfer':
-                    doc.items.forEach(item => {
-                        const fromKey = `${item.productId}-${doc.from_warehouse_id}`;
-                        const fromStock = runningStockState.get(fromKey);
-                        const transferCost = fromStock ? fromStock.avg_cost : 0;
-                        
-                        // Update running state
-                        if (fromStock) fromStock.qty -= item.quantity;
-
-                        const toKey = `${item.productId}-${doc.to_warehouse_id}`;
-                        let toStock = runningStockState.get(toKey) || { qty: 0, avg_cost: 0 };
-                        const newTotalQty = toStock.qty + item.quantity;
-                        toStock.avg_cost = newTotalQty > 0 ? ((toStock.qty * toStock.avg_cost) + (item.quantity * transferCost)) / newTotalQty : 0;
-                        toStock.qty = newTotalQty;
-                        runningStockState.set(toKey, toStock);
-                        
-                        // Update report
+                    if (warehouseId === 'all' || doc.warehouse_id === warehouseId) {
                         const pTurnover = turnoverResult.get(item.productId)!;
-                        if (warehouseId === 'all' || doc.from_warehouse_id === warehouseId) {
-                            pTurnover.credit_qty += item.quantity;
-                            pTurnover.credit_value += item.quantity * transferCost;
-                            pTurnover.details.push({ date: doc.date.toISOString(), docNumber: doc.doc_number, docType: 'transfer-out', warehouseName: getWarehouseName(doc.from_warehouse_id), qtyChange: -item.quantity, valueChange: -item.quantity * transferCost });
-                        }
-                        if (warehouseId === 'all' || doc.to_warehouse_id === warehouseId) {
-                            pTurnover.debit_qty += item.quantity;
-                            pTurnover.debit_value += item.quantity * transferCost;
-                            pTurnover.details.push({ date: doc.date.toISOString(), docNumber: doc.doc_number, docType: 'transfer-in', warehouseName: getWarehouseName(doc.to_warehouse_id), qtyChange: item.quantity, valueChange: item.quantity * transferCost });
-                        }
-                    });
-                    break;
+                        pTurnover.debit_qty += item.quantity;
+                        pTurnover.debit_value += item.quantity * item.price;
+                        pTurnover.details.push({ date: doc.date.toISOString(), docNumber: doc.doc_number, docType: 'receipt', warehouseName: getWarehouseName(doc.warehouse_id), qtyChange: item.quantity, valueChange: item.quantity * item.price });
+                    }
+                });
+            } else if (doc.docType === 'writeoff' || doc.docType === 'return') {
+                 doc.items.forEach(item => {
+                    let qtyToConsume = item.quantity;
+                    let valueOfConsumed = 0;
+                    const productBatches = periodStock
+                        .filter(s => s.productId === item.productId && s.warehouseId === doc.warehouse_id)
+                        .sort((a,b) => new Date(a.receiptDate).getTime() - new Date(b.receiptDate).getTime());
+                    
+                    for (const batch of productBatches) {
+                        if (qtyToConsume <= 0) break;
+                        const consumeAmount = Math.min(qtyToConsume, batch.quantity);
+                        valueOfConsumed += consumeAmount * batch.cost;
+                        batch.quantity -= consumeAmount;
+                        qtyToConsume -= consumeAmount;
+                    }
+
+                    if (warehouseId === 'all' || doc.warehouse_id === warehouseId) {
+                        const pTurnover = turnoverResult.get(item.productId)!;
+                        pTurnover.credit_qty += item.quantity;
+                        pTurnover.credit_value += valueOfConsumed;
+                        pTurnover.details.push({ date: doc.date.toISOString(), docNumber: doc.doc_number, docType: doc.docType, warehouseName: getWarehouseName(doc.warehouse_id), qtyChange: -item.quantity, valueChange: -valueOfConsumed });
+                    }
+                });
+                periodStock = periodStock.filter(s => s.quantity > 0.001);
+            } else if (doc.docType === 'transfer') {
+                doc.items.forEach(item => {
+                    let qtyToTransfer = item.quantity;
+                    let valueOfTransferred = 0;
+                    const productBatches = periodStock
+                        .filter(s => s.productId === item.productId && s.warehouseId === doc.from_warehouse_id)
+                        .sort((a,b) => new Date(a.receiptDate).getTime() - new Date(b.receiptDate).getTime());
+                    
+                    for (const batch of productBatches) {
+                        if (qtyToTransfer <= 0) break;
+                        const transferAmount = Math.min(qtyToTransfer, batch.quantity);
+                        valueOfTransferred += transferAmount * batch.cost;
+                        batch.quantity -= transferAmount;
+                        qtyToTransfer -= transferAmount;
+                        periodStock.push({
+                            batchId: `${batch.batchId}-t-${doc.id}`,
+                            productId: item.productId,
+                            warehouseId: doc.to_warehouse_id,
+                            quantity: transferAmount,
+                            cost: batch.cost,
+                            receiptDate: doc.date.toISOString(),
+                            validDate: batch.validDate
+                        });
+                    }
+
+                    const pTurnover = turnoverResult.get(item.productId)!;
+                    if (warehouseId === 'all' || doc.from_warehouse_id === warehouseId) {
+                        pTurnover.credit_qty += item.quantity;
+                        pTurnover.credit_value += valueOfTransferred;
+                        pTurnover.details.push({ date: doc.date.toISOString(), docNumber: doc.doc_number, docType: 'transfer-out', warehouseName: getWarehouseName(doc.from_warehouse_id), qtyChange: -item.quantity, valueChange: -valueOfTransferred });
+                    }
+                    if (warehouseId === 'all' || doc.to_warehouse_id === warehouseId) {
+                        pTurnover.debit_qty += item.quantity;
+                        pTurnover.debit_value += valueOfTransferred;
+                        pTurnover.details.push({ date: doc.date.toISOString(), docNumber: doc.doc_number, docType: 'transfer-in', warehouseName: getWarehouseName(doc.to_warehouse_id), qtyChange: item.quantity, valueChange: valueOfTransferred });
+                    }
+                });
+                 periodStock = periodStock.filter(s => s.quantity > 0.001);
             }
-        });
+        }
         
         turnoverResult.forEach(data => {
             data.closing_qty = data.opening_qty + data.debit_qty - data.credit_qty;
@@ -222,9 +236,20 @@ export const TurnoverStatementReport: React.FC<TurnoverStatementReportProps> = (
         return `${from} - ${to} oralig'idagi harakat`;
     }, [filters.dateFrom, filters.dateTo])
 
+    const getDocIcon = (docType: TransactionDetail['docType']) => {
+        switch(docType) {
+            case 'receipt': return <span title="Kirim"><ReceiptIcon className="h-4 w-4 text-green-600" /></span>;
+            case 'writeoff': return <span title="Chiqim"><WriteOffIcon className="h-4 w-4 text-red-600" /></span>;
+            case 'return': return <span title="Qaytarish"><ReturnIcon className="h-4 w-4 text-orange-600" /></span>;
+            case 'transfer-in': return <span title="Ichki kirim (ko'chirish)"><TransferIcon className="h-4 w-4 text-amber-600" /></span>;
+            case 'transfer-out': return <span title="Ichki chiqim (ko'chirish)"><TransferIcon className="h-4 w-4 text-blue-600" /></span>;
+            default: return null;
+        }
+    }
+
     return (
         <div className="bg-white p-6 rounded-xl shadow-md">
-            <h2 className="text-2xl font-bold text-slate-800 mb-1">Aylanma Qaydnoma</h2>
+            <h2 className="text-2xl font-bold text-slate-800 mb-1">Aylanma Qaydnoma {appMode === 'pro' && '(FIFO)'}</h2>
             <p className="text-sm text-slate-500 mb-4">{dateRangeText}</p>
             
             <div className="flex flex-wrap items-end gap-4 p-4 border rounded-lg bg-slate-50 mb-6">
@@ -279,10 +304,10 @@ export const TurnoverStatementReport: React.FC<TurnoverStatementReportProps> = (
                                 const isExpanded = expandedRows.has(d.product.id);
                                 return (
                                 <React.Fragment key={d.product.id}>
-                                <tr onClick={() => handleToggleExpand(d.product.id)} className="hover:bg-slate-50 cursor-pointer border-b border-slate-200">
+                                <tr onClick={() => appMode === 'pro' && handleToggleExpand(d.product.id)} className={`hover:bg-slate-50 border-b border-slate-200 ${appMode === 'pro' ? 'cursor-pointer' : ''}`}>
                                     <td className="px-4 py-3 font-medium text-slate-900 border-r border-slate-200">
                                         <div className="flex items-center gap-2">
-                                            <ChevronDownIcon className={`h-4 w-4 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
+                                            {appMode === 'pro' && <ChevronDownIcon className={`h-4 w-4 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />}
                                             {d.product.name}
                                         </div>
                                     </td>
@@ -295,7 +320,7 @@ export const TurnoverStatementReport: React.FC<TurnoverStatementReportProps> = (
                                     <td className="px-4 py-3 text-right font-bold text-slate-800 border-r border-slate-200">{d.closing_qty.toFixed(2)}</td>
                                     <td className="px-4 py-3 text-right font-mono font-bold text-slate-800">{formatCurrency(d.closing_value)}</td>
                                 </tr>
-                                {isExpanded && (
+                                {isExpanded && appMode === 'pro' && (
                                     <tr className="bg-slate-50/50">
                                         <td colSpan={9} className="p-2">
                                             <div className="p-2 bg-white rounded-md border">
@@ -316,11 +341,8 @@ export const TurnoverStatementReport: React.FC<TurnoverStatementReportProps> = (
                                                             <tr key={i} className="border-t">
                                                                 <td className="px-2 py-1.5 border-r border-slate-200">{new Date(det.date).toLocaleDateString()}</td>
                                                                 <td className="px-2 py-1.5 border-r border-slate-200">{det.docNumber}</td>
-                                                                <td className="px-2 py-1.5 capitalize border-r border-slate-200" title={det.docType}>
-                                                                    { det.docType === 'receipt' ? <ReceiptIcon className="h-4 w-4 text-green-600" /> 
-                                                                    : det.docType === 'writeoff' ? <WriteOffIcon className="h-4 w-4 text-red-600" />
-                                                                    : <TransferIcon className="h-4 w-4 text-amber-600" />
-                                                                    }
+                                                                <td className="px-2 py-1.5 capitalize border-r border-slate-200">
+                                                                    {getDocIcon(det.docType)}
                                                                 </td>
                                                                 <td className="px-2 py-1.5 border-r border-slate-200">{det.warehouseName}</td>
                                                                 <td className={`px-2 py-1.5 text-right font-mono border-r border-slate-200 ${det.qtyChange > 0 ? 'text-green-600' : 'text-red-600'}`}>{det.qtyChange.toFixed(2)}</td>

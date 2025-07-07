@@ -1,14 +1,17 @@
 
+
 import { useState, useEffect } from 'react';
 
 const SETTINGS_KEY = 'ombor_nazorati_settings';
 
 interface AppSettings {
     defaultWarehouseId: string | null;
+    appMode: 'pro' | 'lite';
 }
 
 const defaultSettings: AppSettings = {
     defaultWarehouseId: null,
+    appMode: 'pro',
 };
 
 const loadSettings = (): AppSettings => {
@@ -47,8 +50,14 @@ export const useSettings = () => {
         updateSetting('defaultWarehouseId', id);
     };
 
+    const setAppMode = (mode: 'pro' | 'lite') => {
+        updateSetting('appMode', mode);
+    };
+
     return {
         defaultWarehouseId: settings.defaultWarehouseId,
         setDefaultWarehouseId,
+        appMode: settings.appMode,
+        setAppMode,
     };
 };

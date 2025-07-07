@@ -39,12 +39,15 @@ export enum DocumentStatus {
   CONFIRMED = 'confirmed',
 }
 
+// Stock is now managed by batch. Each record represents a specific batch of a product in a warehouse.
 export interface Stock {
-  id: string; // Unique ID for each stock record, e.g., 'p1-w1'
+  batchId: string; // Unique ID for each batch, e.g., grn1-item1
   productId: string;
   warehouseId: string;
   quantity: number;
-  average_cost: number; 
+  cost: number; // Cost at the time of receipt for this specific batch
+  receiptDate: string; // ISO string format of the receipt date, crucial for FIFO
+  validDate?: string; // Optional expiry date for the batch
 }
 
 
@@ -53,6 +56,8 @@ export interface GoodsReceiptItem {
   productId: string;
   quantity: number;
   price: number;
+  batchId: string; // Auto-generated ID for the batch being received
+  validDate: string; // Expiry date for the batch
 }
 
 export interface GoodsReceiptNote {
@@ -80,7 +85,7 @@ export enum WriteOffReason {
 export interface WriteOffItem {
   productId: string;
   quantity: number;
-  cost: number; // captured from the specific stock's average_cost
+  cost: number; // captured from FIFO-consumed batches
 }
 
 export interface WriteOffNote {
@@ -127,7 +132,25 @@ export interface InventoryNote {
     items: InventoryItem[];
 }
 
-// 3.5 Yetkazib beruvchiga to'lov (Payment)
+// 3.5 Yetkazib beruvchiga qaytarish (Goods Return Note)
+export interface GoodsReturnItem {
+  productId: string;
+  quantity: number;
+  cost: number; // captured from FIFO-consumed batches at the time of return
+}
+
+export interface GoodsReturnNote {
+  id: string;
+  doc_number: string;
+  supplier_id: string;
+  warehouse_id: string;
+  date: string;
+  status: DocumentStatus;
+  items: GoodsReturnItem[];
+}
+
+
+// 3.6 Yetkazib beruvchiga to'lov (Payment)
 export enum PaymentMethod {
   BANK = "Bank o'tkazmasi",
   CASH = 'Naqd pul',
@@ -146,7 +169,7 @@ export interface PaymentLink {
 }
 
 export interface Payment {
-    id: string;
+    id:string;
     doc_number: string;
     date: string;
     supplier_id: string;

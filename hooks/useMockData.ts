@@ -6,7 +6,8 @@ import {
     WriteOffNote, WriteOffReason, WriteOffItem,
     InternalTransferNote, InternalTransferItem,
     InventoryNote, InventoryItem,
-    Payment, PaymentMethod, PaymentLink
+    Payment, PaymentMethod, PaymentLink,
+    GoodsReturnNote, GoodsReturnItem
 } from '../types';
 
 const initialProducts: Product[] = [
@@ -29,16 +30,16 @@ const initialSuppliers: Supplier[] = [
 ];
 
 const initialStock: Stock[] = [
-    { id: 'p1-w1', productId: 'p1', warehouseId: 'w1', quantity: 120, average_cost: 5000 },
-    { id: 'p2-w1', productId: 'p2', warehouseId: 'w1', quantity: 80, average_cost: 11000 },
-    { id: 'p4-w1', productId: 'p4', warehouseId: 'w1', quantity: 15, average_cost: 18000 },
-    { id: 'p1-w2', productId: 'p1', warehouseId: 'w2', quantity: 30, average_cost: 5200 },
+    { batchId: 'grn1-i0', productId: 'p1', warehouseId: 'w1', quantity: 120, cost: 5000, receiptDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), validDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString() },
+    { batchId: 'grn2-i0', productId: 'p2', warehouseId: 'w1', quantity: 80, cost: 11000, receiptDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), validDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString() },
+    { batchId: 'grn2-i1', productId: 'p4', warehouseId: 'w1', quantity: 15, cost: 18000, receiptDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), validDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString() },
+    { batchId: 'grn3-i0', productId: 'p1', warehouseId: 'w2', quantity: 30, cost: 5200, receiptDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), validDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString() },
 ];
 
 const initialGoodsReceipts: GoodsReceiptNote[] = [
-    { id: 'grn1', doc_number: 'K-0001', supplier_id: 's1', warehouse_id: 'w1', date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p1', quantity: 100, price: 5000}], paid_amount: 500000 },
-    { id: 'grn2', doc_number: 'K-0002', supplier_id: 's2', warehouse_id: 'w1', date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p2', quantity: 200, price: 11500}], paid_amount: 1000000 },
-    { id: 'grn3', doc_number: 'K-0003', supplier_id: 's1', warehouse_id: 'w2', date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p5', quantity: 1000, price: 1400}], paid_amount: 0 },
+    { id: 'grn1', doc_number: 'K-0001', supplier_id: 's1', warehouse_id: 'w1', date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p1', quantity: 100, price: 5000, batchId: 'grn1-i0', validDate: new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString() }], paid_amount: 500000 },
+    { id: 'grn2', doc_number: 'K-0002', supplier_id: 's2', warehouse_id: 'w1', date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p2', quantity: 200, price: 11500, batchId: 'grn2-i0', validDate: new Date(new Date().setMonth(new Date().getMonth() + 12)).toISOString() }], paid_amount: 1000000 },
+    { id: 'grn3', doc_number: 'K-0003', supplier_id: 's1', warehouse_id: 'w2', date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p5', quantity: 1000, price: 1400, batchId: 'grn3-i0', validDate: new Date(new Date().setDate(new Date().getDate() + 20)).toISOString() }], paid_amount: 0 },
 ]
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('uz-UZ').format(amount);
@@ -53,11 +54,13 @@ export const useMockData = () => {
   const [internalTransfers, setInternalTransfers] = useState<InternalTransferNote[]>([]);
   const [inventoryNotes, setInventoryNotes] = useState<InventoryNote[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [goodsReturns, setGoodsReturns] = useState<GoodsReturnNote[]>([]);
 
   // Helpers
   const getTotalStockQuantity = (productId: string, warehouseId: string, currentStock: Stock[] = stock) => {
-    const stockItem = currentStock.find(s => s.productId === productId && s.warehouseId === warehouseId);
-    return stockItem ? stockItem.quantity : 0;
+    return currentStock
+        .filter(s => s.productId === productId && s.warehouseId === warehouseId)
+        .reduce((sum, s) => sum + s.quantity, 0);
   }
   const getTotalStockAcrossWarehouses = (productId: string) => {
       return stock.filter(s => s.productId === productId && s.quantity > 0)
@@ -84,7 +87,16 @@ export const useMockData = () => {
           return sum;
       }, 0);
 
-      return supplier.initial_balance + totalReceipts - totalPayments;
+      const totalReturns = goodsReturns.reduce((sum, note) => {
+        if(note.supplier_id === supplierId && note.status === DocumentStatus.CONFIRMED) {
+            const returnTotal = note.items.reduce((itemSum, item) => itemSum + item.quantity * item.cost, 0);
+            return sum + returnTotal;
+        }
+        return sum;
+      }, 0);
+
+
+      return supplier.initial_balance + totalReceipts - totalPayments - totalReturns;
   }
 
     const checkCreditLimit = (note: GoodsReceiptNote) => {
@@ -109,91 +121,81 @@ export const useMockData = () => {
         const targetDate = new Date(targetDateStr);
         targetDate.setHours(23, 59, 59, 999);
 
-        const confirmedReceipts = goodsReceipts.filter(d => d.status === DocumentStatus.CONFIRMED && new Date(d.date) <= targetDate);
-        const confirmedWriteOffs = writeOffs.filter(d => d.status === DocumentStatus.CONFIRMED && new Date(d.date) <= targetDate);
-        const confirmedTransfers = internalTransfers.filter(d => d.status === DocumentStatus.CONFIRMED && new Date(d.date) <= targetDate);
-        
         const allDocs = [
-            ...confirmedReceipts.map(d => ({ ...d, docType: 'receipt', date: new Date(d.date) } as const)),
-            ...confirmedWriteOffs.map(d => ({ ...d, docType: 'writeoff', date: new Date(d.date) } as const)),
-            ...confirmedTransfers.map(d => ({ ...d, docType: 'transfer', date: new Date(d.date) } as const))
-        ].sort((a, b) => a.date.getTime() - b.date.getTime());
+            ...goodsReceipts.map(d => ({ ...d, docType: 'receipt', date: new Date(d.date) } as const)),
+            ...writeOffs.map(d => ({ ...d, docType: 'writeoff', date: new Date(d.date) } as const)),
+            ...internalTransfers.map(d => ({ ...d, docType: 'transfer', date: new Date(d.date) } as const)),
+            ...goodsReturns.map(d => ({ ...d, docType: 'return', date: new Date(d.date) } as const)),
+        ]
+        .filter(d => d.status === DocumentStatus.CONFIRMED && new Date(d.date) <= targetDate)
+        .sort((a, b) => a.date.getTime() - b.date.getTime());
         
-        const stockState: Map<string, Stock> = new Map();
+        let historicalStock: Stock[] = [];
 
-        allDocs.forEach(doc => {
+        for (const doc of allDocs) {
             switch (doc.docType) {
                 case 'receipt':
                     doc.items.forEach(item => {
-                        const key = `${item.productId}-${doc.warehouse_id}`;
-                        const existingStock = stockState.get(key);
-                        if (existingStock) {
-                            const oldQty = existingStock.quantity;
-                            const oldAvgCost = existingStock.average_cost;
-                            const newQty = item.quantity;
-                            const newPrice = item.price;
-                            
-                            const totalQty = oldQty + newQty;
-                            if (totalQty > 0) {
-                                existingStock.average_cost = ((oldQty * oldAvgCost) + (newQty * newPrice)) / totalQty;
-                            }
-                            existingStock.quantity += newQty;
-                        } else {
-                            stockState.set(key, {
-                                id: key,
+                        historicalStock.push({
+                            batchId: item.batchId,
+                            productId: item.productId,
+                            warehouseId: doc.warehouse_id,
+                            quantity: item.quantity,
+                            cost: item.price,
+                            receiptDate: doc.date.toISOString(),
+                            validDate: item.validDate,
+                        });
+                    });
+                    break;
+                
+                case 'writeoff':
+                case 'return':
+                    doc.items.forEach(item => {
+                        let qtyToConsume = item.quantity;
+                        const productBatches = historicalStock
+                            .filter(s => s.productId === item.productId && s.warehouseId === doc.warehouse_id)
+                            .sort((a,b) => new Date(a.receiptDate).getTime() - new Date(b.receiptDate).getTime());
+                        
+                        for (const batch of productBatches) {
+                            if (qtyToConsume <= 0) break;
+                            const consumeAmount = Math.min(qtyToConsume, batch.quantity);
+                            batch.quantity -= consumeAmount;
+                            qtyToConsume -= consumeAmount;
+                        }
+                    });
+                    historicalStock = historicalStock.filter(s => s.quantity > 0.001);
+                    break;
+
+                case 'transfer':
+                    doc.items.forEach(item => {
+                        let qtyToTransfer = item.quantity;
+                        const productBatches = historicalStock
+                            .filter(s => s.productId === item.productId && s.warehouseId === doc.from_warehouse_id)
+                            .sort((a,b) => new Date(a.receiptDate).getTime() - new Date(b.receiptDate).getTime());
+                        
+                        for (const batch of productBatches) {
+                            if (qtyToTransfer <= 0) break;
+                            const transferAmount = Math.min(qtyToTransfer, batch.quantity);
+                            batch.quantity -= transferAmount;
+                            qtyToTransfer -= transferAmount;
+
+                            // Create new batch in destination warehouse
+                            historicalStock.push({
+                                batchId: `${batch.batchId}-t-${doc.id}`,
                                 productId: item.productId,
-                                warehouseId: doc.warehouse_id,
-                                quantity: item.quantity,
-                                average_cost: item.price,
+                                warehouseId: doc.to_warehouse_id,
+                                quantity: transferAmount,
+                                cost: batch.cost,
+                                receiptDate: doc.date.toISOString(),
+                                validDate: batch.validDate,
                             });
                         }
                     });
-                    break;
-                case 'writeoff':
-                     doc.items.forEach(item => {
-                        const key = `${item.productId}-${doc.warehouse_id}`;
-                        const stockItem = stockState.get(key);
-                        if (stockItem) {
-                            stockItem.quantity -= item.quantity;
-                        }
-                    });
-                    break;
-                case 'transfer':
-                    doc.items.forEach(item => {
-                         const fromKey = `${item.productId}-${doc.from_warehouse_id}`;
-                         const fromStock = stockState.get(fromKey);
-                         
-                         if(fromStock) {
-                            const transferCost = fromStock.average_cost; // Cost is determined at time of transfer
-                            fromStock.quantity -= item.quantity;
-                            
-                            const toKey = `${item.productId}-${doc.to_warehouse_id}`;
-                            const toStock = stockState.get(toKey);
-                            if(toStock) {
-                                const oldQty = toStock.quantity;
-                                const oldAvgCost = toStock.average_cost;
-                                const newQty = item.quantity;
-                                
-                                const totalQty = oldQty + newQty;
-                                if (totalQty > 0) {
-                                    toStock.average_cost = ((oldQty * oldAvgCost) + (newQty * transferCost)) / totalQty;
-                                }
-                                toStock.quantity += newQty;
-                            } else {
-                                stockState.set(toKey, {
-                                    id: toKey,
-                                    productId: item.productId,
-                                    warehouseId: doc.to_warehouse_id,
-                                    quantity: item.quantity,
-                                    average_cost: transferCost,
-                                });
-                            }
-                         }
-                    });
+                    historicalStock = historicalStock.filter(s => s.quantity > 0.001);
                     break;
             }
-        });
-        return Array.from(stockState.values()).filter(s => s.quantity > 0.001);
+        }
+        return historicalStock;
     };
 
 
@@ -220,6 +222,35 @@ export const useMockData = () => {
   const updateSupplier = (updatedSupplier: Supplier) => setSuppliers(prev => prev.map(s => s.id === updatedSupplier.id ? updatedSupplier : s));
   const deleteSupplier = (supplierId: string) => setSuppliers(prev => prev.filter(s => s.id !== supplierId));
   const isInnUnique = (inn: string, currentId: string | null = null) => !suppliers.some(s => s.inn === inn && s.id !== currentId);
+
+
+  // FIFO consumption helper
+  const consumeStockByFIFO = (productId: string, warehouseId: string, quantityToConsume: number, currentStock: Stock[]): { updatedStock: Stock[], consumedCost: number } => {
+    let stillToConsume = quantityToConsume;
+    let totalCost = 0;
+    const productBatches = currentStock
+        .filter(s => s.productId === productId && s.warehouseId === warehouseId)
+        .sort((a,b) => new Date(a.receiptDate).getTime() - new Date(b.receiptDate).getTime());
+
+    if(productBatches.reduce((sum, b) => sum + b.quantity, 0) < quantityToConsume) {
+        throw new Error("Omborda yetarli mahsulot mavjud emas.");
+    }
+    
+    for(const batch of productBatches) {
+        if(stillToConsume <= 0) break;
+        
+        const amountFromThisBatch = Math.min(stillToConsume, batch.quantity);
+        totalCost += amountFromThisBatch * batch.cost;
+        batch.quantity -= amountFromThisBatch;
+        stillToConsume -= amountFromThisBatch;
+    }
+
+    const updatedStock = currentStock.filter(s => s.quantity > 0.001);
+    const consumedCost = quantityToConsume > 0 ? totalCost / quantityToConsume : 0;
+    
+    return { updatedStock, consumedCost };
+  }
+
 
   // Goods Receipt Operations
   const addGoodsReceipt = (note: Omit<GoodsReceiptNote, 'id' | 'status' | 'doc_number'>) => {
@@ -266,33 +297,16 @@ export const useMockData = () => {
     }
     
     setStock(prevStock => {
-        const newStock = [...prevStock];
-        note.items.forEach(item => {
-            const key = `${item.productId}-${note.warehouse_id}`;
-            let stockItem = newStock.find(s => s.id === key);
-
-            const oldQty = stockItem ? stockItem.quantity : 0;
-            const oldAvgCost = stockItem ? stockItem.average_cost : 0;
-            const newQty = item.quantity;
-            const newPrice = item.price;
-            
-            const totalQty = oldQty + newQty;
-            const newAvgCost = totalQty > 0 ? ((oldQty * oldAvgCost) + (newQty * newPrice)) / totalQty : 0;
-
-            if (stockItem) {
-                stockItem.quantity = totalQty;
-                stockItem.average_cost = newAvgCost;
-            } else {
-                newStock.push({
-                    id: key,
-                    productId: item.productId,
-                    warehouseId: note.warehouse_id,
-                    quantity: newQty,
-                    average_cost: newPrice,
-                });
-            }
-        });
-        return newStock;
+        const newBatches = note.items.map(item => ({
+            batchId: item.batchId,
+            productId: item.productId,
+            warehouseId: note.warehouse_id,
+            quantity: item.quantity,
+            cost: item.price,
+            receiptDate: note.date,
+            validDate: item.validDate
+        }));
+        return [...prevStock, ...newBatches];
     });
     
     setGoodsReceipts(prevReceipts => 
@@ -313,34 +327,34 @@ export const useMockData = () => {
     setWriteOffs(prev => [newNote, ...prev]);
     return newNote;
   }
+  const updateWriteOff = (updatedNote: WriteOffNote) => {
+    setWriteOffs(prev => {
+        const noteIndex = prev.findIndex(n => n.id === updatedNote.id);
+        if (noteIndex === -1 || prev[noteIndex].status === DocumentStatus.CONFIRMED) {
+            alert("Tasdiqlangan yoki mavjud bo'lmagan hujjatni o'zgartirib bo'lmaydi.");
+            return prev;
+        }
+        const newWriteOffs = [...prev];
+        newWriteOffs[noteIndex] = updatedNote;
+        return newWriteOffs;
+    });
+  };
 
   const confirmWriteOff = (noteId: string) => {
     const note = writeOffs.find(n => n.id === noteId);
     if (!note || note.status === DocumentStatus.CONFIRMED) return;
 
-    setStock(prevStock => {
-        let tempStock = JSON.parse(JSON.stringify(prevStock)); // Deep copy
-        let errors: string[] = [];
-        
-        note.items.forEach(item => {
-            const stockItem = tempStock.find((s: Stock) => s.productId === item.productId && s.warehouseId === note.warehouse_id);
+    let tempStock = JSON.parse(JSON.stringify(stock));
+    const updatedItems: WriteOffItem[] = [];
 
-            if (!stockItem || stockItem.quantity < item.quantity) {
-                const productName = getProduct(item.productId)?.name || 'Noma\'lum mahsulot';
-                errors.push(`"${productName}" mahsuloti omborda yetarli emas!`);
-                return;
-            }
-            stockItem.quantity -= item.quantity;
-        });
-
-        if (errors.length > 0) {
-            throw new Error(errors.join('\n'));
-        }
-
-        setWriteOffs(prev => prev.map(n => n.id === noteId ? { ...n, status: DocumentStatus.CONFIRMED } : n));
-        
-        return tempStock.filter((s: Stock) => s.quantity > 0.001);
+    note.items.forEach(item => {
+      const { updatedStock, consumedCost } = consumeStockByFIFO(item.productId, note.warehouse_id, item.quantity, tempStock);
+      tempStock = updatedStock;
+      updatedItems.push({ ...item, cost: consumedCost });
     });
+
+    setStock(tempStock);
+    setWriteOffs(prev => prev.map(n => n.id === noteId ? { ...n, items: updatedItems, status: DocumentStatus.CONFIRMED } : n));
   }
 
 
@@ -351,57 +365,61 @@ export const useMockData = () => {
       setInternalTransfers(prev => [newNote, ...prev]);
       return newNote;
   }
+
+  const updateInternalTransfer = (updatedNote: InternalTransferNote) => {
+    setInternalTransfers(prev => {
+        const noteIndex = prev.findIndex(n => n.id === updatedNote.id);
+        if (noteIndex === -1 || prev[noteIndex].status === DocumentStatus.CONFIRMED) {
+            alert("Tasdiqlangan yoki mavjud bo'lmagan hujjatni o'zgartirib bo'lmaydi.");
+            return prev;
+        }
+        const newInternalTransfers = [...prev];
+        newInternalTransfers[noteIndex] = updatedNote;
+        return newInternalTransfers;
+    });
+  };
   
   const confirmInternalTransfer = (noteId: string) => {
     const note = internalTransfers.find(n => n.id === noteId);
     if (!note || note.status === DocumentStatus.CONFIRMED) return;
 
-    setStock(prevStock => {
-        let tempStock: Stock[] = JSON.parse(JSON.stringify(prevStock));
-        let errors: string[] = [];
-
-        note.items.forEach(item => {
-            const fromStock = tempStock.find(s => s.productId === item.productId && s.warehouseId === note.from_warehouse_id);
-            
-            if (!fromStock || fromStock.quantity < item.quantity) {
-                const productName = getProduct(item.productId)?.name;
-                errors.push(`"${productName}" jo'natuvchi omborda yetarli emas!`);
-                return;
-            }
-            
-            const transferCost = fromStock.average_cost;
-            fromStock.quantity -= item.quantity;
-
-            let toStock = tempStock.find(s => s.productId === item.productId && s.warehouseId === note.to_warehouse_id);
-            if(toStock) {
-                const oldQty = toStock.quantity;
-                const oldAvgCost = toStock.average_cost;
-                const newQty = item.quantity;
-                
-                const totalQty = oldQty + newQty;
-                toStock.average_cost = totalQty > 0 ? ((oldQty * oldAvgCost) + (newQty * transferCost)) / totalQty : 0;
-                toStock.quantity = totalQty;
-            } else {
-                const newStockItem: Stock = {
-                    id: `${item.productId}-${note.to_warehouse_id}`,
-                    productId: item.productId,
-                    warehouseId: note.to_warehouse_id,
-                    quantity: item.quantity,
-                    average_cost: transferCost
-                };
-                tempStock.push(newStockItem);
-            }
-        });
-
-        if (errors.length > 0) {
-            throw new Error(errors.join('\n'));
-        }
-
-        setInternalTransfers(prev => prev.map(n => n.id === noteId ? { ...n, status: DocumentStatus.CONFIRMED } : n));
+    let tempStock = JSON.parse(JSON.stringify(stock));
+    
+    note.items.forEach(item => {
+        let qtyToTransfer = item.quantity;
+        const productBatches = tempStock
+            .filter((s: Stock) => s.productId === item.productId && s.warehouseId === note.from_warehouse_id)
+            .sort((a: Stock, b: Stock) => new Date(a.receiptDate).getTime() - new Date(b.receiptDate).getTime());
         
-        return tempStock.filter(s => s.quantity > 0.001);
+        if (productBatches.reduce((sum: number, b: Stock) => sum + b.quantity, 0) < qtyToTransfer) {
+            const productName = getProduct(item.productId)?.name || item.productId;
+            throw new Error(`"${productName}" mahsuloti jo'natuvchi omborda yetarli emas.`);
+        }
+        
+        for (const batch of productBatches) {
+            if (qtyToTransfer <= 0) break;
+            const transferAmount = Math.min(qtyToTransfer, batch.quantity);
+            
+            batch.quantity -= transferAmount;
+            qtyToTransfer -= transferAmount;
+
+            // Create a new batch in the destination warehouse
+            const newBatch: Stock = {
+                batchId: `${batch.batchId}-t-${note.id}`,
+                productId: item.productId,
+                warehouseId: note.to_warehouse_id,
+                quantity: transferAmount,
+                cost: batch.cost,
+                receiptDate: note.date, // The transfer date becomes the new receipt date for FIFO in the new warehouse
+                validDate: batch.validDate,
+            };
+            tempStock.push(newBatch);
+        }
     });
-}
+
+    setStock(tempStock.filter((s: Stock) => s.quantity > 0.001));
+    setInternalTransfers(prev => prev.map(n => n.id === noteId ? { ...n, status: DocumentStatus.CONFIRMED } : n));
+  }
 
 
   // Inventory Operations
@@ -410,6 +428,19 @@ export const useMockData = () => {
     const newNote = { ...note, id: `inv${Date.now()}`, status: DocumentStatus.DRAFT, doc_number };
     setInventoryNotes(prev => [newNote, ...prev]);
   }
+
+  const updateInventoryNote = (updatedNote: InventoryNote) => {
+    setInventoryNotes(prev => {
+        const noteIndex = prev.findIndex(n => n.id === updatedNote.id);
+        if (noteIndex === -1 || prev[noteIndex].status === DocumentStatus.CONFIRMED) {
+            alert("Tasdiqlangan yoki mavjud bo'lmagan hujjatni o'zgartirib bo'lmaydi.");
+            return prev;
+        }
+        const newInventoryNotes = [...prev];
+        newInventoryNotes[noteIndex] = updatedNote;
+        return newInventoryNotes;
+    });
+  };
 
   const confirmInventoryNote = (noteId: string) => {
     const note = inventoryNotes.find(n => n.id === noteId);
@@ -420,20 +451,26 @@ export const useMockData = () => {
     
     note.items.forEach(item => {
         const difference = item.difference;
-        const stockItem = stock.find(s => s.productId === item.productId && s.warehouseId === note.warehouse_id);
-        const cost = stockItem ? stockItem.average_cost : 0;
         
-        if(difference > 0) { // Ortiqcha
+        if(difference > 0) { // Surplus
+            const productStock = stock.filter(s => s.productId === item.productId && s.warehouseId === note.warehouse_id);
+            const avgCost = productStock.length > 0
+                ? productStock.reduce((sum, s) => sum + s.quantity * s.cost, 0) / productStock.reduce((sum, s) => sum + s.quantity, 0)
+                : 0;
+
             surplusItems.push({ 
                 productId: item.productId, 
                 quantity: difference, 
-                price: cost, // Use current average cost as price for surplus
+                price: avgCost,
+                batchId: `inv-${note.id}-${item.productId}`,
+                validDate: new Date().toISOString(), // Default valid date, might need better logic
+                // No valid date for surplus, or maybe we should ask? For now, today.
             });
-        } else if (difference < 0) { // Kamomad
+        } else if (difference < 0) { // Shortage
             shortageItems.push({
                 productId: item.productId,
                 quantity: Math.abs(difference),
-                cost: cost,
+                cost: 0, // Cost will be calculated by confirmWriteOff
             });
         }
     });
@@ -460,6 +497,43 @@ export const useMockData = () => {
     }
     
     setInventoryNotes(prev => prev.map(n => n.id === noteId ? { ...n, status: DocumentStatus.CONFIRMED } : n));
+  }
+
+  // Goods Return Operations
+  const addGoodsReturn = (note: Omit<GoodsReturnNote, 'id' | 'status' | 'doc_number'>) => {
+    const doc_number = `Q-${(goodsReturns.length + 1).toString().padStart(4, '0')}`;
+    const newNote = { ...note, id: `grtn${Date.now()}`, status: DocumentStatus.DRAFT, doc_number };
+    setGoodsReturns(prev => [newNote, ...prev]);
+    return newNote;
+  }
+  const updateGoodsReturn = (updatedNote: GoodsReturnNote) => {
+    setGoodsReturns(prev => {
+        const noteIndex = prev.findIndex(n => n.id === updatedNote.id);
+        if (noteIndex === -1 || prev[noteIndex].status === DocumentStatus.CONFIRMED) {
+            alert("Tasdiqlangan yoki mavjud bo'lmagan hujjatni o'zgartirib bo'lmaydi.");
+            return prev;
+        }
+        const newGoodsReturns = [...prev];
+        newGoodsReturns[noteIndex] = updatedNote;
+        return newGoodsReturns;
+    });
+  };
+
+  const confirmGoodsReturn = (noteId: string) => {
+    const note = goodsReturns.find(n => n.id === noteId);
+    if (!note || note.status === DocumentStatus.CONFIRMED) return;
+
+    let tempStock = JSON.parse(JSON.stringify(stock));
+    const updatedItems: GoodsReturnItem[] = [];
+
+    note.items.forEach(item => {
+        const { updatedStock, consumedCost } = consumeStockByFIFO(item.productId, note.warehouse_id, item.quantity, tempStock);
+        tempStock = updatedStock;
+        updatedItems.push({ ...item, cost: consumedCost });
+    });
+    
+    setStock(tempStock);
+    setGoodsReturns(prev => prev.map(n => n.id === noteId ? { ...n, items: updatedItems, status: DocumentStatus.CONFIRMED } : n));
   }
   
   // Payment Operations
@@ -548,9 +622,10 @@ export const useMockData = () => {
     suppliers, addSupplier, updateSupplier, deleteSupplier, isInnUnique,
     stock, getTotalStockQuantity, getTotalStockAcrossWarehouses, getStockAsOf,
     goodsReceipts, addGoodsReceipt, updateGoodsReceipt, deleteGoodsReceipt, confirmGoodsReceipt, addAndConfirmGoodsReceipt, getNoteTotal,
-    writeOffs, addWriteOff, confirmWriteOff,
-    internalTransfers, addInternalTransfer, confirmInternalTransfer,
-    inventoryNotes, addInventoryNote, confirmInventoryNote,
+    writeOffs, addWriteOff, updateWriteOff, confirmWriteOff,
+    internalTransfers, addInternalTransfer, updateInternalTransfer, confirmInternalTransfer,
+    inventoryNotes, addInventoryNote, updateInventoryNote, confirmInventoryNote,
+    goodsReturns, addGoodsReturn, updateGoodsReturn, confirmGoodsReturn,
     payments, addPayment, addDirectPaymentForNote,
     getSupplierBalance,
     checkCreditLimit,

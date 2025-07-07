@@ -1,10 +1,12 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { WriteOffNote, WriteOffItem, DocumentStatus, WriteOffReason, Stock } from '../types';
+import { WriteOffNote, WriteOffItem, DocumentStatus, WriteOffReason, Stock, Product } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
 import { Modal } from './Modal';
 import { PlusIcon } from './icons/PlusIcon';
 import { TrashIcon } from './icons/TrashIcon';
+import { EditIcon } from './icons/EditIcon';
+import { ConfirmationModal } from './ConfirmationModal';
 
 interface WriteOffsViewProps {
   dataManager: UseMockDataReturnType;
@@ -15,8 +17,10 @@ const formatCurrency = (amount: number) => new Intl.NumberFormat('uz-UZ').format
 const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
 export const WriteOffsView: React.FC<WriteOffsViewProps> = ({ dataManager, defaultWarehouseId }) => {
-  const { writeOffs, warehouses, addWriteOff, confirmWriteOff } = dataManager;
+  const { writeOffs, warehouses, addWriteOff, updateWriteOff, confirmWriteOff } = dataManager;
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingNote, setEditingNote] = useState<WriteOffNote | null>(null);
+  const [noteToConfirm, setNoteToConfirm] = useState<string | null>(null);
   
   const [filters, setFilters] = useState({
     dateFrom: formatDate(new Date(new Date().setDate(new Date().getDate() - 30))),
@@ -55,27 +59,40 @@ export const WriteOffsView: React.FC<WriteOffsViewProps> = ({ dataManager, defau
   }, [writeOffs, filters]);
 
 
-  const handleOpenModal = () => setIsModalOpen(true);
-  const handleCloseModal = () => setIsModalOpen(false);
+  const handleOpenModal = (note: WriteOffNote | null = null) => {
+    setEditingNote(note);
+    setIsModalOpen(true);
+  };
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingNote(null);
+  };
 
-  const handleSubmit = (formData: Omit<WriteOffNote, 'id' | 'status' | 'doc_number'>) => {
+  const handleSubmit = (formData: Omit<WriteOffNote, 'id' | 'status' | 'doc_number'> | WriteOffNote) => {
     try {
-        addWriteOff(formData);
+        if ('id' in formData) {
+            updateWriteOff(formData);
+        } else {
+            addWriteOff(formData as Omit<WriteOffNote, 'id' | 'status' | 'doc_number'>);
+        }
         handleCloseModal();
     } catch (error: any) {
         alert(`Xatolik: ${error.message}`);
     }
   };
   
-  const handleConfirm = (id: string) => {
-    if (window.confirm("Hujjatni tasdiqlamoqchimisiz? Tasdiqlangan hujjatni o'zgartirib bo'lmaydi.")) {
-        try {
-            confirmWriteOff(id);
-        } catch (error: any) {
-            alert(`Xatolik: ${error.message}`);
-        }
+  const handleConfirmClick = (id: string) => {
+    setNoteToConfirm(id);
+  };
+
+  const handleConfirm = () => {
+    if (!noteToConfirm) return;
+    try {
+      confirmWriteOff(noteToConfirm);
+    } catch (error: any) {
+      alert(`Xatolik: ${error.message}`);
     }
-  }
+  };
   
   const getNoteTotal = (items: WriteOffItem[]) => items.reduce((sum, item) => sum + item.cost * item.quantity, 0);
 
@@ -84,7 +101,7 @@ export const WriteOffsView: React.FC<WriteOffsViewProps> = ({ dataManager, defau
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <h2 className="text-2xl font-bold text-slate-800">Chiqim Hujjatlari</h2>
         <button
-          onClick={handleOpenModal}
+          onClick={() => handleOpenModal()}
           className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2.5 rounded-lg hover:from-amber-600 hover:to-amber-700 transition-all shadow"
         >
           <PlusIcon className="h-5 w-5" />
@@ -138,7 +155,10 @@ export const WriteOffsView: React.FC<WriteOffsViewProps> = ({ dataManager, defau
                 </td>
                 <td className="px-6 py-4 text-center">
                   {note.status === DocumentStatus.DRAFT && (
-                    <button onClick={() => handleConfirm(note.id)} className="px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded hover:bg-green-600 transition-colors">Tasdiqlash</button>
+                    <div className="flex justify-center items-center gap-2">
+                      <button onClick={() => handleOpenModal(note)} title="Tahrirlash" className="p-2 rounded-full text-amber-600 hover:bg-amber-100 transition-colors"><EditIcon className="h-5 w-5"/></button>
+                      <button onClick={() => handleConfirmClick(note.id)} className="px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-md hover:bg-green-600 transition-colors">Tasdiqlash</button>
+                    </div>
                   )}
                 </td>
               </tr>
@@ -154,8 +174,17 @@ export const WriteOffsView: React.FC<WriteOffsViewProps> = ({ dataManager, defau
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onSubmit={handleSubmit}
+        note={editingNote}
         dataManager={dataManager}
         defaultWarehouseId={defaultWarehouseId}
+      />
+      <ConfirmationModal
+        isOpen={!!noteToConfirm}
+        onClose={() => setNoteToConfirm(null)}
+        onConfirm={handleConfirm}
+        title="Hujjatni tasdiqlash"
+        message={<>Hujjatni tasdiqlamoqchimisiz? <br/> Tasdiqlangan hujjatni o'zgartirib bo'lmaydi va zaxiralar yangilanadi.</>}
+        confirmButtonText="Ha, tasdiqlash"
       />
     </div>
   );
@@ -165,35 +194,66 @@ export const WriteOffsView: React.FC<WriteOffsViewProps> = ({ dataManager, defau
 interface WriteOffFormModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: Omit<WriteOffNote, 'id' | 'status' | 'doc_number'>) => void;
+    onSubmit: (data: Omit<WriteOffNote, 'id' | 'status' | 'doc_number'> | WriteOffNote) => void;
+    note: WriteOffNote | null;
     dataManager: UseMockDataReturnType;
     defaultWarehouseId: string | null;
 }
 
 type FormItem = { productId: string, quantity: number, availableQty: number, cost: number };
 
-const WriteOffFormModal: React.FC<WriteOffFormModalProps> = ({isOpen, onClose, onSubmit, dataManager, defaultWarehouseId}) => {
-    const { products, warehouses, stock, getTotalStockQuantity } = dataManager;
+const WriteOffFormModal: React.FC<WriteOffFormModalProps> = ({isOpen, onClose, onSubmit, note, dataManager, defaultWarehouseId}) => {
+    const { products, warehouses, stock } = dataManager;
     const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], warehouse_id: '', reason: WriteOffReason.SPOILAGE });
     const [items, setItems] = useState<FormItem[]>([]);
-    const [availableStock, setAvailableStock] = useState<Stock[]>([]);
+
+    const productsInStock = useMemo(() => {
+        if (!formData.warehouse_id) return [];
+        const productQuantities = new Map<string, number>();
+
+        stock
+            .filter(s => s.warehouseId === formData.warehouse_id)
+            .forEach(s => {
+                productQuantities.set(s.productId, (productQuantities.get(s.productId) || 0) + s.quantity);
+            });
+
+        if (note && note.warehouse_id === formData.warehouse_id) {
+            note.items.forEach(item => {
+                productQuantities.set(item.productId, (productQuantities.get(item.productId) || 0) + item.quantity);
+            });
+        }
+        
+        const uniqueProductIds = new Set(productQuantities.keys());
+
+        return products
+            .filter(p => uniqueProductIds.has(p.id))
+            .map(p => ({ ...p, totalQuantity: productQuantities.get(p.id)! }));
+    }, [formData.warehouse_id, stock, products, note]);
 
     useEffect(() => {
         if(isOpen) {
-            const warehouseToSet = defaultWarehouseId || warehouses.find(w => w.is_active)?.id || '';
-            setFormData({ date: new Date().toISOString().split('T')[0], warehouse_id: warehouseToSet, reason: WriteOffReason.SPOILAGE });
-            setItems([]);
+            if (note) {
+                setFormData({ date: new Date(note.date).toISOString().split('T')[0], warehouse_id: note.warehouse_id, reason: note.reason });
+                const updatedItems = note.items.map(item => {
+                    const currentProductStock = stock
+                        .filter(s => s.warehouseId === note.warehouse_id && s.productId === item.productId)
+                        .reduce((sum, s) => sum + s.quantity, 0);
+                    return { ...item, availableQty: currentProductStock + item.quantity };
+                });
+                setItems(updatedItems);
+            } else {
+                const warehouseToSet = defaultWarehouseId || warehouses.find(w => w.is_active)?.id || '';
+                setFormData({ date: new Date().toISOString().split('T')[0], warehouse_id: warehouseToSet, reason: WriteOffReason.SPOILAGE });
+                setItems([]);
+            }
         }
-    }, [isOpen, warehouses, defaultWarehouseId]);
+    }, [isOpen, note, warehouses, defaultWarehouseId, stock]);
 
     useEffect(() => {
-        if(formData.warehouse_id) {
-            setAvailableStock(stock.filter(s => s.warehouseId === formData.warehouse_id && s.quantity > 0));
-        } else {
-            setAvailableStock([]);
+        if (!note) {
+            setItems([]);
         }
-        setItems([]);
-    }, [formData.warehouse_id, stock]);
+    }, [formData.warehouse_id, note]);
 
     const handleHeaderChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -204,10 +264,10 @@ const WriteOffFormModal: React.FC<WriteOffFormModalProps> = ({isOpen, onClose, o
         const currentItem = newItems[index];
 
         if (field === 'productId') {
-            const selectedStock = availableStock.find(s => s.productId === value);
+            const productInfo = productsInStock.find(p => p.id === value);
             currentItem.productId = value;
-            currentItem.availableQty = selectedStock?.quantity || 0;
-            currentItem.cost = selectedStock?.average_cost || 0;
+            currentItem.availableQty = productInfo?.totalQuantity || 0;
+            currentItem.cost = 0; // Cost will be calculated upon confirmation by FIFO
         } else if (field === 'quantity') {
             currentItem.quantity = parseFloat(value) || 0;
         }
@@ -248,13 +308,16 @@ const WriteOffFormModal: React.FC<WriteOffFormModalProps> = ({isOpen, onClose, o
             return;
         }
 
-        onSubmit({ ...formData, date: new Date(formData.date).toISOString(), items: finalItems });
+        const dataToSubmit = { ...formData, date: new Date(formData.date).toISOString(), items: finalItems };
+        if (note) {
+            onSubmit({ ...note, ...dataToSubmit });
+        } else {
+            onSubmit(dataToSubmit);
+        }
     }
     
-    const getProductInfo = (productId: string) => products.find(p => p.id === productId);
-
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={"Yangi chiqim hujjati"} size="4xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={note ? "Chiqim hujjatini tahrirlash" : "Yangi chiqim hujjati"} size="4xl">
             <form onSubmit={handleFormSubmit} className="space-y-6">
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
@@ -294,9 +357,9 @@ const WriteOffFormModal: React.FC<WriteOffFormModalProps> = ({isOpen, onClose, o
                                             <td className="p-1 border-r border-slate-200">
                                                  <select value={item.productId} onChange={(e) => handleItemChange(index, 'productId', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md" disabled={!formData.warehouse_id}>
                                                     <option value="" disabled>Tanlang...</option>
-                                                    {availableStock.map(s => (
-                                                        <option key={s.productId} value={s.productId}>
-                                                            {getProductInfo(s.productId)?.name} ({s.quantity.toFixed(2)} {getProductInfo(s.productId)?.unit})
+                                                    {productsInStock.map(p => (
+                                                        <option key={p.id} value={p.id}>
+                                                            {p.name} ({p.totalQuantity.toFixed(2)} {p.unit})
                                                         </option>
                                                     ))}
                                                 </select>

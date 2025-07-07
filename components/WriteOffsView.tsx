@@ -8,12 +8,13 @@ import { TrashIcon } from './icons/TrashIcon';
 
 interface WriteOffsViewProps {
   dataManager: UseMockDataReturnType;
+  defaultWarehouseId: string | null;
 }
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('uz-UZ').format(amount);
 const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
-export const WriteOffsView: React.FC<WriteOffsViewProps> = ({ dataManager }) => {
+export const WriteOffsView: React.FC<WriteOffsViewProps> = ({ dataManager, defaultWarehouseId }) => {
   const { writeOffs, warehouses, addWriteOff, confirmWriteOff } = dataManager;
   const [isModalOpen, setIsModalOpen] = useState(false);
   
@@ -154,6 +155,7 @@ export const WriteOffsView: React.FC<WriteOffsViewProps> = ({ dataManager }) => 
         onClose={handleCloseModal}
         onSubmit={handleSubmit}
         dataManager={dataManager}
+        defaultWarehouseId={defaultWarehouseId}
       />
     </div>
   );
@@ -165,33 +167,33 @@ interface WriteOffFormModalProps {
     onClose: () => void;
     onSubmit: (data: Omit<WriteOffNote, 'id' | 'status' | 'doc_number'>) => void;
     dataManager: UseMockDataReturnType;
+    defaultWarehouseId: string | null;
 }
 
-type FormItem = { productId: string, batch_number: string, quantity: number, availableQty: number, cost: number };
+type FormItem = { productId: string, quantity: number, availableQty: number, cost: number };
 
-const WriteOffFormModal: React.FC<WriteOffFormModalProps> = ({isOpen, onClose, onSubmit, dataManager}) => {
-    const { products, warehouses, getProductBatches } = dataManager;
+const WriteOffFormModal: React.FC<WriteOffFormModalProps> = ({isOpen, onClose, onSubmit, dataManager, defaultWarehouseId}) => {
+    const { products, warehouses, stock, getTotalStockQuantity } = dataManager;
     const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], warehouse_id: '', reason: WriteOffReason.SPOILAGE });
     const [items, setItems] = useState<FormItem[]>([]);
     const [availableStock, setAvailableStock] = useState<Stock[]>([]);
 
     useEffect(() => {
         if(isOpen) {
-            const firstWarehouseId = warehouses.find(w => w.is_active)?.id || '';
-            setFormData({ date: new Date().toISOString().split('T')[0], warehouse_id: firstWarehouseId, reason: WriteOffReason.SPOILAGE });
+            const warehouseToSet = defaultWarehouseId || warehouses.find(w => w.is_active)?.id || '';
+            setFormData({ date: new Date().toISOString().split('T')[0], warehouse_id: warehouseToSet, reason: WriteOffReason.SPOILAGE });
             setItems([]);
         }
-    }, [isOpen, warehouses]);
+    }, [isOpen, warehouses, defaultWarehouseId]);
 
     useEffect(() => {
         if(formData.warehouse_id) {
-            const allBatches = products.flatMap(p => getProductBatches(p.id, formData.warehouse_id));
-            setAvailableStock(allBatches);
+            setAvailableStock(stock.filter(s => s.warehouseId === formData.warehouse_id && s.quantity > 0));
         } else {
             setAvailableStock([]);
         }
         setItems([]);
-    }, [formData.warehouse_id, dataManager.stock]);
+    }, [formData.warehouse_id, stock]);
 
     const handleHeaderChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -202,15 +204,10 @@ const WriteOffFormModal: React.FC<WriteOffFormModalProps> = ({isOpen, onClose, o
         const currentItem = newItems[index];
 
         if (field === 'productId') {
+            const selectedStock = availableStock.find(s => s.productId === value);
             currentItem.productId = value;
-            currentItem.batch_number = ''; // Reset batch on product change
-            currentItem.availableQty = 0;
-            currentItem.cost = 0;
-        } else if (field === 'batch_number') {
-            const selectedBatch = availableStock.find(s => s.productId === currentItem.productId && s.batch_number === value);
-            currentItem.batch_number = value;
-            currentItem.availableQty = selectedBatch?.quantity || 0;
-            currentItem.cost = selectedBatch?.cost || 0;
+            currentItem.availableQty = selectedStock?.quantity || 0;
+            currentItem.cost = selectedStock?.average_cost || 0;
         } else if (field === 'quantity') {
             currentItem.quantity = parseFloat(value) || 0;
         }
@@ -219,7 +216,7 @@ const WriteOffFormModal: React.FC<WriteOffFormModalProps> = ({isOpen, onClose, o
     }
     
     const handleAddItem = () => {
-        setItems([...items, { productId: '', batch_number: '', quantity: 1, availableQty: 0, cost: 0 }]);
+        setItems([...items, { productId: '', quantity: 1, availableQty: 0, cost: 0 }]);
     }
 
     const handleRemoveItem = (index: number) => {
@@ -230,18 +227,17 @@ const WriteOffFormModal: React.FC<WriteOffFormModalProps> = ({isOpen, onClose, o
         e.preventDefault();
         const finalItems: WriteOffItem[] = [];
         for (const item of items) {
-            if (!item.productId || !item.batch_number || item.quantity <= 0) {
-                 alert("Iltimos, har bir qatorda mahsulot va partiyani tanlab, miqdorni to'g'ri kiriting.");
+            if (!item.productId || item.quantity <= 0) {
+                 alert("Iltimos, har bir qatorda mahsulotni tanlab, miqdorni to'g'ri kiriting.");
                  return;
             }
             if (item.quantity > item.availableQty) {
                 const productName = products.find(p=>p.id === item.productId)?.name;
-                alert(`Xatolik: "${productName}" (partiya: ${item.batch_number}) mahsuloti uchun miqdor qoldiqdan ko'p kiritildi.`);
+                alert(`Xatolik: "${productName}" mahsuloti uchun miqdor qoldiqdan ko'p kiritildi.`);
                 return;
             }
             finalItems.push({
                 productId: item.productId,
-                batch_number: item.batch_number,
                 quantity: item.quantity,
                 cost: item.cost
             });
@@ -258,7 +254,7 @@ const WriteOffFormModal: React.FC<WriteOffFormModalProps> = ({isOpen, onClose, o
     const getProductInfo = (productId: string) => products.find(p => p.id === productId);
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={"Yangi chiqim hujjati"} size="5xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={"Yangi chiqim hujjati"} size="4xl">
             <form onSubmit={handleFormSubmit} className="space-y-6">
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
@@ -286,39 +282,27 @@ const WriteOffFormModal: React.FC<WriteOffFormModalProps> = ({isOpen, onClose, o
                         <table className="w-full text-sm border-collapse">
                             <thead className="bg-slate-50">
                                 <tr>
-                                    <th className="px-2 py-2 text-left font-medium text-slate-600 border-r border-slate-200" style={{width: '30%'}}>Mahsulot</th>
-                                    <th className="px-2 py-2 text-left font-medium text-slate-600 border-r border-slate-200" style={{width: '40%'}}>Partiya (Yaroqlilik / Qoldiq)</th>
+                                    <th className="px-2 py-2 text-left font-medium text-slate-600 border-r border-slate-200" style={{width: '60%'}}>Mahsulot (Qoldiq)</th>
                                     <th className="px-2 py-2 text-left font-medium text-slate-600 border-r border-slate-200">Miqdor</th>
                                     <th className="px-2 py-2"></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {items.map((item, index) => {
-                                    const productBatches = availableStock.filter(s => s.productId === item.productId);
                                     return (
                                         <tr key={index} className="border-b">
                                             <td className="p-1 border-r border-slate-200">
                                                  <select value={item.productId} onChange={(e) => handleItemChange(index, 'productId', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md" disabled={!formData.warehouse_id}>
                                                     <option value="" disabled>Tanlang...</option>
-                                                    {products.filter(p => availableStock.some(s => s.productId === p.id)).map(p => (
-                                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                                    {availableStock.map(s => (
+                                                        <option key={s.productId} value={s.productId}>
+                                                            {getProductInfo(s.productId)?.name} ({s.quantity.toFixed(2)} {getProductInfo(s.productId)?.unit})
+                                                        </option>
                                                     ))}
                                                 </select>
                                             </td>
                                             <td className="p-1 border-r border-slate-200">
-                                                <select value={item.batch_number} onChange={(e) => handleItemChange(index, 'batch_number', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md" disabled={!item.productId}>
-                                                     <option value="" disabled>Partiyani tanlang...</option>
-                                                     {productBatches.map(b => (
-                                                         <option key={b.id} value={b.batch_number}>
-                                                            {b.batch_number} 
-                                                            ({b.expiry_date ? new Date(b.expiry_date).toLocaleDateString() : 'muddatsiz'}) 
-                                                            - {b.quantity.toFixed(2)} {getProductInfo(b.productId)?.unit}
-                                                         </option>
-                                                     ))}
-                                                </select>
-                                            </td>
-                                            <td className="p-1 border-r border-slate-200">
-                                                <input type="number" value={item.quantity} onChange={(e) => handleItemChange(index, 'quantity', e.target.value)} max={item.availableQty} min="0.01" step="0.01" className="w-full px-3 py-2 border border-slate-300 rounded-md" required disabled={!item.batch_number}/>
+                                                <input type="number" value={item.quantity} onChange={(e) => handleItemChange(index, 'quantity', e.target.value)} max={item.availableQty} min="0.01" step="0.01" className="w-full px-3 py-2 border border-slate-300 rounded-md" required disabled={!item.productId}/>
                                             </td>
                                             <td className="p-1 text-center">
                                                 <button type="button" onClick={() => handleRemoveItem(index)} className="text-red-500 hover:text-red-700"><TrashIcon className="h-5 w-5"/></button>

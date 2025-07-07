@@ -40,14 +40,11 @@ export enum DocumentStatus {
 }
 
 export interface Stock {
-  id: string; // Unique ID for each stock lot, e.g., 'stk123'
+  id: string; // Unique ID for each stock record, e.g., 'p1-w1'
   productId: string;
   warehouseId: string;
   quantity: number;
-  cost: number; // Cost of this specific batch, not an average
-  batch_number: string;
-  expiry_date?: string; // ISO Date string, optional
-  received_date: string; // ISO Date string
+  average_cost: number; 
 }
 
 
@@ -56,8 +53,6 @@ export interface GoodsReceiptItem {
   productId: string;
   quantity: number;
   price: number;
-  batch_number: string;
-  expiry_date?: string; // Optional for products without expiry
 }
 
 export interface GoodsReceiptNote {
@@ -84,9 +79,8 @@ export enum WriteOffReason {
 
 export interface WriteOffItem {
   productId: string;
-  batch_number: string;
   quantity: number;
-  cost: number; // captured from the specific batch
+  cost: number; // captured from the specific stock's average_cost
 }
 
 export interface WriteOffNote {
@@ -102,7 +96,6 @@ export interface WriteOffNote {
 // 3.3 Ichki ko'chirish hujjati (Internal Transfer Note)
 export interface InternalTransferItem {
   productId: string;
-  batch_number: string;
   quantity: number;
 }
 

@@ -7,11 +7,12 @@ import { PlusIcon } from './icons/PlusIcon';
 
 interface InventoryCountsViewProps {
   dataManager: UseMockDataReturnType;
+  defaultWarehouseId: string | null;
 }
 
 const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
-export const InventoryCountsView: React.FC<InventoryCountsViewProps> = ({ dataManager }) => {
+export const InventoryCountsView: React.FC<InventoryCountsViewProps> = ({ dataManager, defaultWarehouseId }) => {
   const { inventoryNotes, warehouses, addInventoryNote, confirmInventoryNote } = dataManager;
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -137,6 +138,7 @@ export const InventoryCountsView: React.FC<InventoryCountsViewProps> = ({ dataMa
         onClose={handleCloseModal}
         onSubmit={handleSubmit}
         dataManager={dataManager}
+        defaultWarehouseId={defaultWarehouseId}
       />
     </div>
   );
@@ -148,20 +150,21 @@ interface InventoryFormModalProps {
     onClose: () => void;
     onSubmit: (data: Omit<InventoryNote, 'id' | 'status' | 'doc_number'>) => void;
     dataManager: UseMockDataReturnType;
+    defaultWarehouseId: string | null;
 }
 
-const InventoryFormModal: React.FC<InventoryFormModalProps> = ({isOpen, onClose, onSubmit, dataManager}) => {
+const InventoryFormModal: React.FC<InventoryFormModalProps> = ({isOpen, onClose, onSubmit, dataManager, defaultWarehouseId}) => {
     const { products, warehouses, stock, getTotalStockQuantity } = dataManager;
     const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], warehouse_id: '' });
     const [items, setItems] = useState<Omit<InventoryItem, 'difference'>[]>([]);
 
     useEffect(() => {
         if(isOpen) {
-            const firstWarehouseId = warehouses.find(w => w.is_active)?.id || '';
-            setFormData({ date: new Date().toISOString().split('T')[0], warehouse_id: firstWarehouseId });
+            const warehouseToSet = defaultWarehouseId || warehouses.find(w => w.is_active)?.id || '';
+            setFormData({ date: new Date().toISOString().split('T')[0], warehouse_id: warehouseToSet });
             setItems([]);
         }
-    }, [isOpen, warehouses]);
+    }, [isOpen, warehouses, defaultWarehouseId]);
 
     const handleLoadStock = () => {
         if (!formData.warehouse_id) {

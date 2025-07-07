@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import { UseMockDataReturnType } from '../hooks/useMockData';
 import { TurnoverStatementReport } from './reports/TurnoverStatementReport';
 import { GoodsReceiptsReport } from './reports/GoodsReceiptsReport';
 import { SupplierBalanceReport } from './reports/SupplierBalanceReport';
 import { AgingReport } from './reports/AgingReport';
-import { StockOverviewReport } from './reports/CriticalStockReport';
+import { StockOverviewReport } from './reports/StockOverviewReport';
 import { BalanceIcon } from './icons/BalanceIcon';
 import { TransferIcon } from './icons/TransferIcon';
 import { ReceiptIcon } from './icons/ReceiptIcon';
@@ -14,6 +15,7 @@ import { ClockIcon } from './icons/ClockIcon';
 interface ReportsViewProps {
   dataManager: UseMockDataReturnType;
   navigate: (view: 'documents', payload: any) => void;
+  defaultWarehouseId: string | null;
 }
 
 type ActiveTab = 'critical_stock' | 'turnover' | 'receipts' | 'supplier_balance' | 'aging';
@@ -26,17 +28,17 @@ const tabs = [
     { id: 'aging', label: 'Qarzdorlik Muddati', icon: ClockIcon },
 ];
 
-export const ReportsView: React.FC<ReportsViewProps> = ({ dataManager, navigate }) => {
+export const ReportsView: React.FC<ReportsViewProps> = ({ dataManager, navigate, defaultWarehouseId }) => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('critical_stock');
 
   const renderContent = () => {
     switch (activeTab) {
       case 'critical_stock':
-        return <StockOverviewReport dataManager={dataManager} navigate={navigate} />;
+        return <StockOverviewReport dataManager={dataManager} navigate={navigate} defaultWarehouseId={defaultWarehouseId} />;
       case 'turnover':
-        return <TurnoverStatementReport dataManager={dataManager} />;
+        return <TurnoverStatementReport dataManager={dataManager} defaultWarehouseId={defaultWarehouseId} />;
       case 'receipts':
-        return <GoodsReceiptsReport dataManager={dataManager} />;
+        return <GoodsReceiptsReport dataManager={dataManager} defaultWarehouseId={defaultWarehouseId} />;
       case 'supplier_balance':
         return <SupplierBalanceReport dataManager={dataManager} />;
       case 'aging':

@@ -16,6 +16,7 @@ interface DocumentsViewProps {
   dataManager: UseMockDataReturnType;
   newDocumentPayload: { type: string, product: any } | null;
   clearPayload: () => void;
+  defaultWarehouseId: string | null;
 }
 
 type ActiveTab = 'receipts' | 'writeoffs' | 'transfers' | 'inventory' | 'payments';
@@ -28,7 +29,7 @@ const tabs = [
     { id: 'payments', label: 'To\'lovlar', icon: PaymentIcon },
 ];
 
-export const DocumentsView: React.FC<DocumentsViewProps> = ({ dataManager, newDocumentPayload, clearPayload }) => {
+export const DocumentsView: React.FC<DocumentsViewProps> = ({ dataManager, newDocumentPayload, clearPayload, defaultWarehouseId }) => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('receipts');
   
   useEffect(() => {
@@ -41,13 +42,13 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ dataManager, newDo
     const currentPayload = activeTab === 'receipts' ? newDocumentPayload : null;
     switch (activeTab) {
       case 'receipts':
-        return <GoodsReceiptsView dataManager={dataManager} newDocumentPayload={currentPayload} clearPayload={clearPayload} />;
+        return <GoodsReceiptsView dataManager={dataManager} newDocumentPayload={currentPayload} clearPayload={clearPayload} defaultWarehouseId={defaultWarehouseId} />;
       case 'writeoffs':
-        return <WriteOffsView dataManager={dataManager} />;
+        return <WriteOffsView dataManager={dataManager} defaultWarehouseId={defaultWarehouseId} />;
       case 'transfers':
-        return <InternalTransfersView dataManager={dataManager} />;
+        return <InternalTransfersView dataManager={dataManager} defaultWarehouseId={defaultWarehouseId} />;
       case 'inventory':
-        return <InventoryCountsView dataManager={dataManager} />;
+        return <InventoryCountsView dataManager={dataManager} defaultWarehouseId={defaultWarehouseId} />;
       case 'payments':
         return <PaymentsView dataManager={dataManager} />;
       default:

@@ -9,7 +9,9 @@ import { DocumentIcon } from './components/icons/DocumentIcon';
 import { DocumentsView } from './components/DocumentsView';
 import { ReportIcon } from './components/icons/ReportIcon';
 import { ReportsView } from './components/ReportsView';
-import { GoodsReceiptNote } from './types';
+import { SettingsIcon } from './components/icons/SettingsIcon';
+import { useSettings } from './hooks/useSettings';
+import { SettingsModal } from './components/SettingsModal';
 
 
 type View = 'products' | 'management' | 'documents' | 'reports';
@@ -19,8 +21,10 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>('reports');
   const [viewToOpen, setViewToOpen] = useState<{view: View, payload: any} | null>(null);
   const [appMode, setAppMode] = useState<AppMode>('pro');
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   const dataManager = useMockData();
+  const { defaultWarehouseId, setDefaultWarehouseId } = useSettings();
 
   const navigationItems = useMemo(() => [
     { id: 'reports', label: 'Hisobotlar', icon: <ReportIcon className="h-5 w-5" /> },
@@ -46,11 +50,16 @@ const App: React.FC = () => {
       case 'management':
         return <ManagementTabs dataManager={dataManager} />;
       case 'documents':
-        return <DocumentsView dataManager={dataManager} newDocumentPayload={viewToOpen?.view === 'documents' ? viewToOpen.payload : null} clearPayload={() => setViewToOpen(null)} />;
+        return <DocumentsView 
+                 dataManager={dataManager} 
+                 newDocumentPayload={viewToOpen?.view === 'documents' ? viewToOpen.payload : null} 
+                 clearPayload={() => setViewToOpen(null)}
+                 defaultWarehouseId={defaultWarehouseId}
+               />;
       case 'reports':
-        return <ReportsView dataManager={dataManager} navigate={handleNavigation} />;
+        return <ReportsView dataManager={dataManager} navigate={handleNavigation} defaultWarehouseId={defaultWarehouseId} />;
       default:
-        return <ReportsView dataManager={dataManager} navigate={handleNavigation} />;
+        return <ReportsView dataManager={dataManager} navigate={handleNavigation} defaultWarehouseId={defaultWarehouseId} />;
     }
   };
 
@@ -87,7 +96,7 @@ const App: React.FC = () => {
           {appMode === 'pro' && (
             <>
                 {/* Desktop Navigation */}
-                <nav className="hidden md:flex items-center h-full">
+                <nav className="hidden md:flex items-center h-full space-x-4">
                     <div className="flex items-baseline space-x-1">
                         {navigationItems.map(item => (
                         <button
@@ -104,25 +113,38 @@ const App: React.FC = () => {
                         </button>
                         ))}
                     </div>
+                     <div className="h-full flex items-center border-l border-slate-200 pl-4">
+                       <button
+                           onClick={() => setIsSettingsModalOpen(true)}
+                           title="Sozlamalar"
+                           aria-label="Sozlamalar"
+                           className="h-10 w-10 flex items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 hover:text-amber-600 transition-colors"
+                        >
+                           <SettingsIcon className="h-6 w-6" />
+                        </button>
+                    </div>
                 </nav>
 
                 {/* Mobile Navigation */}
-                <nav className="flex md:hidden items-center">
+                <nav className="flex md:hidden items-center space-x-1">
                     {navigationItems.map(item => (
                     <button
                         key={item.id}
                         onClick={() => handleNavigation(item.id as View)}
                         title={item.label}
                         aria-label={item.label}
-                        className={`h-12 w-12 flex items-center justify-center rounded-lg transition-colors ${
+                        className={`h-10 w-10 flex items-center justify-center rounded-lg transition-colors ${
                         activeView === item.id
                             ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white'
-                            : 'text-slate-600 hover:bg-slate-100'
+                            : 'text-slate-600 hover:bg-slate-200'
                         }`}
                     >
                         {React.cloneElement(item.icon, { className: "h-6 w-6" })}
                     </button>
                     ))}
+                     <button onClick={() => setIsSettingsModalOpen(true)} title="Sozlamalar" aria-label="Sozlamalar" className="h-10 w-10 flex items-center justify-center rounded-lg text-slate-600 hover:bg-slate-200">
+                        <SettingsIcon className="h-6 w-6" />
+                    </button>
                 </nav>
             </>
           )}
@@ -150,6 +172,13 @@ const App: React.FC = () => {
             </div>
         )}
       </main>
+      <SettingsModal 
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        dataManager={dataManager}
+        defaultWarehouseId={defaultWarehouseId}
+        setDefaultWarehouseId={setDefaultWarehouseId}
+      />
     </div>
   );
 };

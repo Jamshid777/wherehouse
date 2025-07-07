@@ -11,6 +11,7 @@ import { TransferIcon } from '../icons/TransferIcon';
 
 interface TurnoverStatementReportProps {
     dataManager: UseMockDataReturnType;
+    defaultWarehouseId: string | null;
 }
 
 type TransactionDetail = {
@@ -38,15 +39,19 @@ interface TurnoverData {
 const formatCurrency = (amount: number) => new Intl.NumberFormat('uz-UZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
 const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
-export const TurnoverStatementReport: React.FC<TurnoverStatementReportProps> = ({ dataManager }) => {
+export const TurnoverStatementReport: React.FC<TurnoverStatementReportProps> = ({ dataManager, defaultWarehouseId }) => {
     const [reportData, setReportData] = useState<TurnoverData[] | null>(null);
     const [filters, setFilters] = useState({
         dateFrom: formatDate(new Date(new Date().setDate(new Date().getDate() - 7))),
         dateTo: formatDate(new Date()),
-        warehouseId: 'all',
+        warehouseId: defaultWarehouseId || 'all',
     });
     const [isLoading, setIsLoading] = useState(false);
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+    useEffect(() => {
+        setFilters(prev => ({ ...prev, warehouseId: defaultWarehouseId || 'all' }));
+    }, [defaultWarehouseId]);
 
     const handleToggleExpand = (productId: string) => {
         setExpandedRows(prev => {
@@ -76,7 +81,7 @@ export const TurnoverStatementReport: React.FC<TurnoverStatementReportProps> = (
         startDate.setHours(0,0,0,0);
         const endDate = new Date(dateTo);
         endDate.setHours(23,59,59,999);
-        const { products, goodsReceipts, writeOffs, internalTransfers, warehouses } = dataManager;
+        const { products, goodsReceipts, writeOffs, internalTransfers, warehouses, getStockAsOf } = dataManager;
 
         const allDocs = [
             ...goodsReceipts.map(d => ({ ...d, docType: 'receipt' as const, date: new Date(d.date) })),
@@ -95,75 +100,90 @@ export const TurnoverStatementReport: React.FC<TurnoverStatementReportProps> = (
             });
         });
 
-        // 1. Calculate opening balance
-        const docsBefore = allDocs.filter(d => d.date < startDate);
-        docsBefore.forEach(doc => {
-            const processDoc = (items: any[], sign: 1 | -1, type: 'receipt' | 'writeoff' | 'transfer', warehouseSpecificId?: string) => {
-                if(warehouseId !== 'all' && warehouseSpecificId !== warehouseId) return;
-
-                items.forEach((item: any) => {
-                     const pTurnover = turnoverResult.get(item.productId)!;
-                     const value = type === 'receipt' ? item.price : item.cost;
-                     pTurnover.opening_qty += item.quantity * sign;
-                     pTurnover.opening_value += item.quantity * value * sign;
-                });
-            }
-
-            switch(doc.docType) {
-                case 'receipt':
-                    processDoc(doc.items, 1, 'receipt', doc.warehouse_id);
-                    break;
-                case 'writeoff':
-                    processDoc(doc.items, -1, 'writeoff', doc.warehouse_id);
-                    break;
-                case 'transfer':
-                    // From warehouse (credit)
-                    processDoc(doc.items, -1, 'writeoff', doc.from_warehouse_id);
-                     // To warehouse (debit)
-                    processDoc(doc.items, 1, 'receipt', doc.to_warehouse_id);
-                    break;
+        // 1. Calculate opening balance using getStockAsOf
+        const openingStockDate = new Date(startDate);
+        openingStockDate.setDate(startDate.getDate() - 1);
+        const openingStock = getStockAsOf(openingStockDate.toISOString());
+        
+        openingStock.forEach(stockItem => {
+            const turnoverData = turnoverResult.get(stockItem.productId);
+            if(turnoverData && (warehouseId === 'all' || stockItem.warehouseId === warehouseId)) {
+                turnoverData.opening_qty += stockItem.quantity;
+                turnoverData.opening_value += stockItem.quantity * stockItem.average_cost;
             }
         });
 
+
         // 2. Calculate turnover for the period
+        const runningStockState = new Map<string, {qty: number, avg_cost: number}>(
+            openingStock.map(s => [`${s.productId}-${s.warehouseId}`, {qty: s.quantity, avg_cost: s.average_cost}])
+        );
+
         const docsDuring = allDocs.filter(d => d.date >= startDate && d.date <= endDate);
 
         docsDuring.forEach(doc => {
             const getWarehouseName = (id:string) => warehouses.find(w=>w.id===id)?.name || 'Noma\'lum';
             switch(doc.docType) {
                 case 'receipt':
-                    if (warehouseId === 'all' || doc.warehouse_id === warehouseId) {
-                        doc.items.forEach(item => {
+                    doc.items.forEach(item => {
+                        // Update running state for cost calculation
+                        const key = `${item.productId}-${doc.warehouse_id}`;
+                        let current = runningStockState.get(key) || { qty: 0, avg_cost: 0 };
+                        const newTotalQty = current.qty + item.quantity;
+                        current.avg_cost = newTotalQty > 0 ? ((current.qty * current.avg_cost) + (item.quantity * item.price)) / newTotalQty : 0;
+                        current.qty = newTotalQty;
+                        runningStockState.set(key, current);
+                        
+                        // Update report if warehouse matches filter
+                        if (warehouseId === 'all' || doc.warehouse_id === warehouseId) {
                             const pTurnover = turnoverResult.get(item.productId)!;
                             pTurnover.debit_qty += item.quantity;
                             pTurnover.debit_value += item.quantity * item.price;
                             pTurnover.details.push({ date: doc.date.toISOString(), docNumber: doc.doc_number, docType: 'receipt', warehouseName: getWarehouseName(doc.warehouse_id), qtyChange: item.quantity, valueChange: item.quantity * item.price });
-                        });
-                    }
+                        }
+                    });
                     break;
                 case 'writeoff':
-                    if (warehouseId === 'all' || doc.warehouse_id === warehouseId) {
-                       doc.items.forEach(item => {
+                     doc.items.forEach(item => {
+                        const key = `${item.productId}-${doc.warehouse_id}`;
+                        let current = runningStockState.get(key);
+                        if(current) current.qty -= item.quantity;
+
+                        if (warehouseId === 'all' || doc.warehouse_id === warehouseId) {
                             const pTurnover = turnoverResult.get(item.productId)!;
                             pTurnover.credit_qty += item.quantity;
                             pTurnover.credit_value += item.quantity * item.cost;
                             pTurnover.details.push({ date: doc.date.toISOString(), docNumber: doc.doc_number, docType: 'writeoff', warehouseName: getWarehouseName(doc.warehouse_id), qtyChange: -item.quantity, valueChange: -item.quantity * item.cost });
-                       });
-                    }
+                        }
+                    });
                     break;
                 case 'transfer':
                     doc.items.forEach(item => {
-                        const batchCost = dataManager.stock.find(s=>s.productId === item.productId && s.batch_number === item.batch_number)?.cost || 0;
+                        const fromKey = `${item.productId}-${doc.from_warehouse_id}`;
+                        const fromStock = runningStockState.get(fromKey);
+                        const transferCost = fromStock ? fromStock.avg_cost : 0;
+                        
+                        // Update running state
+                        if (fromStock) fromStock.qty -= item.quantity;
+
+                        const toKey = `${item.productId}-${doc.to_warehouse_id}`;
+                        let toStock = runningStockState.get(toKey) || { qty: 0, avg_cost: 0 };
+                        const newTotalQty = toStock.qty + item.quantity;
+                        toStock.avg_cost = newTotalQty > 0 ? ((toStock.qty * toStock.avg_cost) + (item.quantity * transferCost)) / newTotalQty : 0;
+                        toStock.qty = newTotalQty;
+                        runningStockState.set(toKey, toStock);
+                        
+                        // Update report
                         const pTurnover = turnoverResult.get(item.productId)!;
                         if (warehouseId === 'all' || doc.from_warehouse_id === warehouseId) {
                             pTurnover.credit_qty += item.quantity;
-                            pTurnover.credit_value += item.quantity * batchCost;
-                            pTurnover.details.push({ date: doc.date.toISOString(), docNumber: doc.doc_number, docType: 'transfer-out', warehouseName: getWarehouseName(doc.from_warehouse_id), qtyChange: -item.quantity, valueChange: -item.quantity * batchCost });
+                            pTurnover.credit_value += item.quantity * transferCost;
+                            pTurnover.details.push({ date: doc.date.toISOString(), docNumber: doc.doc_number, docType: 'transfer-out', warehouseName: getWarehouseName(doc.from_warehouse_id), qtyChange: -item.quantity, valueChange: -item.quantity * transferCost });
                         }
                         if (warehouseId === 'all' || doc.to_warehouse_id === warehouseId) {
                             pTurnover.debit_qty += item.quantity;
-                            pTurnover.debit_value += item.quantity * batchCost;
-                            pTurnover.details.push({ date: doc.date.toISOString(), docNumber: doc.doc_number, docType: 'transfer-in', warehouseName: getWarehouseName(doc.to_warehouse_id), qtyChange: item.quantity, valueChange: item.quantity * batchCost });
+                            pTurnover.debit_value += item.quantity * transferCost;
+                            pTurnover.details.push({ date: doc.date.toISOString(), docNumber: doc.doc_number, docType: 'transfer-in', warehouseName: getWarehouseName(doc.to_warehouse_id), qtyChange: item.quantity, valueChange: item.quantity * transferCost });
                         }
                     });
                     break;

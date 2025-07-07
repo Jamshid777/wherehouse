@@ -5,21 +5,26 @@ import { GoodsReceiptNote, GoodsReceiptItem } from '../../types';
 
 interface GoodsReceiptsReportProps {
     dataManager: UseMockDataReturnType;
+    defaultWarehouseId: string | null;
 }
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('uz-UZ').format(amount);
 const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
-export const GoodsReceiptsReport: React.FC<GoodsReceiptsReportProps> = ({ dataManager }) => {
+export const GoodsReceiptsReport: React.FC<GoodsReceiptsReportProps> = ({ dataManager, defaultWarehouseId }) => {
     const { goodsReceipts, suppliers, warehouses } = dataManager;
     const [reportData, setReportData] = useState<GoodsReceiptNote[] | null>(null);
     const [filters, setFilters] = useState({
         dateFrom: formatDate(new Date(new Date().setDate(new Date().getDate() - 7))),
         dateTo: formatDate(new Date()),
         supplierId: 'all',
-        warehouseId: 'all',
+        warehouseId: defaultWarehouseId || 'all',
     });
     const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        setFilters(prev => ({ ...prev, warehouseId: defaultWarehouseId || 'all' }));
+    }, [defaultWarehouseId]);
 
     const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -89,7 +94,7 @@ export const GoodsReceiptsReport: React.FC<GoodsReceiptsReportProps> = ({ dataMa
                 <div>
                     <label htmlFor="warehouseId" className="block text-sm font-medium text-slate-700 mb-1">Ombor</label>
                     <select name="warehouseId" value={filters.warehouseId} onChange={handleFilterChange} className="w-full md:w-48 px-3 py-2.5 border border-slate-300 rounded-lg text-sm">
-                        <option value="all">Barchasi</option>
+                        <option value="all">Barcha omborlar</option>
                         {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                     </select>
                 </div>

@@ -29,17 +29,19 @@ const initialSuppliers: Supplier[] = [
 ];
 
 const initialStock: Stock[] = [
-    { id: 'stk1', productId: 'p1', warehouseId: 'w1', quantity: 120, cost: 5000, batch_number: 'B-001', expiry_date: new Date(2025, 5, 1).toISOString(), received_date: new Date(2024, 5, 1).toISOString() },
-    { id: 'stk2', productId: 'p2', warehouseId: 'w1', quantity: 80, cost: 11000, batch_number: 'B-002', expiry_date: new Date(2025, 10, 1).toISOString(), received_date: new Date(2024, 5, 10).toISOString() },
-    { id: 'stk3', productId: 'p4', warehouseId: 'w1', quantity: 15, cost: 18000, batch_number: 'B-003', received_date: new Date(2024, 4, 20).toISOString() },
-    { id: 'stk4', productId: 'p1', warehouseId: 'w2', quantity: 30, cost: 5200, batch_number: 'B-004', expiry_date: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000).toISOString(), received_date: new Date(2024, 5, 5).toISOString() },
+    { id: 'p1-w1', productId: 'p1', warehouseId: 'w1', quantity: 120, average_cost: 5000 },
+    { id: 'p2-w1', productId: 'p2', warehouseId: 'w1', quantity: 80, average_cost: 11000 },
+    { id: 'p4-w1', productId: 'p4', warehouseId: 'w1', quantity: 15, average_cost: 18000 },
+    { id: 'p1-w2', productId: 'p1', warehouseId: 'w2', quantity: 30, average_cost: 5200 },
 ];
 
 const initialGoodsReceipts: GoodsReceiptNote[] = [
-    { id: 'grn1', doc_number: 'K-0001', supplier_id: 's1', warehouse_id: 'w1', date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p1', quantity: 100, price: 5000, batch_number: '1-1', expiry_date: new Date(2025, 5, 1).toISOString()}], paid_amount: 500000 },
-    { id: 'grn2', doc_number: 'K-0002', supplier_id: 's2', warehouse_id: 'w1', date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p2', quantity: 200, price: 11500, batch_number: '1-1', expiry_date: new Date(2025, 11, 1).toISOString()}], paid_amount: 1000000 },
-    { id: 'grn3', doc_number: 'K-0003', supplier_id: 's1', warehouse_id: 'w2', date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p5', quantity: 1000, price: 1400, batch_number: '1-1', expiry_date: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString()}], paid_amount: 0 },
+    { id: 'grn1', doc_number: 'K-0001', supplier_id: 's1', warehouse_id: 'w1', date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p1', quantity: 100, price: 5000}], paid_amount: 500000 },
+    { id: 'grn2', doc_number: 'K-0002', supplier_id: 's2', warehouse_id: 'w1', date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p2', quantity: 200, price: 11500}], paid_amount: 1000000 },
+    { id: 'grn3', doc_number: 'K-0003', supplier_id: 's1', warehouse_id: 'w2', date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p5', quantity: 1000, price: 1400}], paid_amount: 0 },
 ]
+
+const formatCurrency = (amount: number) => new Intl.NumberFormat('uz-UZ').format(amount);
 
 export const useMockData = () => {
   const [products, setProducts] = useState<Product[]>(initialProducts);
@@ -53,18 +55,9 @@ export const useMockData = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
 
   // Helpers
-  const getProductBatches = (productId: string, warehouseId: string, currentStock: Stock[] = stock) => {
-    return currentStock
-        .filter(s => s.productId === productId && s.warehouseId === warehouseId && s.quantity > 0)
-        .sort((a,b) => {
-            if(a.expiry_date && b.expiry_date) return new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime();
-            if(a.expiry_date) return -1;
-            if(b.expiry_date) return 1;
-            return new Date(a.received_date).getTime() - new Date(b.received_date).getTime();
-        });
-  }
-  const getTotalStockQuantity = (productId: string, warehouseId: string) => {
-    return getProductBatches(productId, warehouseId).reduce((sum, s) => sum + s.quantity, 0);
+  const getTotalStockQuantity = (productId: string, warehouseId: string, currentStock: Stock[] = stock) => {
+    const stockItem = currentStock.find(s => s.productId === productId && s.warehouseId === warehouseId);
+    return stockItem ? stockItem.quantity : 0;
   }
   const getTotalStockAcrossWarehouses = (productId: string) => {
       return stock.filter(s => s.productId === productId && s.quantity > 0)
@@ -128,35 +121,37 @@ export const useMockData = () => {
         
         const stockState: Map<string, Stock> = new Map();
 
-        // This is a simplified approach using event sourcing.
-        // It's not the most performant for very large datasets but accurate for this mock.
-        
         allDocs.forEach(doc => {
             switch (doc.docType) {
                 case 'receipt':
                     doc.items.forEach(item => {
-                        const key = `${item.productId}-${doc.warehouse_id}-${item.batch_number}`;
-                        const existing = stockState.get(key);
-                        if(existing) {
-                            existing.quantity += item.quantity;
+                        const key = `${item.productId}-${doc.warehouse_id}`;
+                        const existingStock = stockState.get(key);
+                        if (existingStock) {
+                            const oldQty = existingStock.quantity;
+                            const oldAvgCost = existingStock.average_cost;
+                            const newQty = item.quantity;
+                            const newPrice = item.price;
+                            
+                            const totalQty = oldQty + newQty;
+                            if (totalQty > 0) {
+                                existingStock.average_cost = ((oldQty * oldAvgCost) + (newQty * newPrice)) / totalQty;
+                            }
+                            existingStock.quantity += newQty;
                         } else {
-                            const newStockItem: Stock = {
-                                id: `stk_hist_${doc.id}_${item.productId}_${item.batch_number}`,
+                            stockState.set(key, {
+                                id: key,
                                 productId: item.productId,
                                 warehouseId: doc.warehouse_id,
                                 quantity: item.quantity,
-                                cost: item.price,
-                                batch_number: item.batch_number,
-                                expiry_date: item.expiry_date,
-                                received_date: doc.date.toISOString(),
-                            };
-                            stockState.set(key, newStockItem);
+                                average_cost: item.price,
+                            });
                         }
                     });
                     break;
                 case 'writeoff':
                      doc.items.forEach(item => {
-                        const key = `${item.productId}-${doc.warehouse_id}-${item.batch_number}`;
+                        const key = `${item.productId}-${doc.warehouse_id}`;
                         const stockItem = stockState.get(key);
                         if (stockItem) {
                             stockItem.quantity -= item.quantity;
@@ -165,25 +160,33 @@ export const useMockData = () => {
                     break;
                 case 'transfer':
                     doc.items.forEach(item => {
-                         const fromKey = `${item.productId}-${doc.from_warehouse_id}-${item.batch_number}`;
+                         const fromKey = `${item.productId}-${doc.from_warehouse_id}`;
                          const fromStock = stockState.get(fromKey);
                          
                          if(fromStock) {
+                            const transferCost = fromStock.average_cost; // Cost is determined at time of transfer
                             fromStock.quantity -= item.quantity;
                             
-                            const toKey = `${item.productId}-${doc.to_warehouse_id}-${item.batch_number}`;
+                            const toKey = `${item.productId}-${doc.to_warehouse_id}`;
                             const toStock = stockState.get(toKey);
                             if(toStock) {
-                                toStock.quantity += item.quantity;
+                                const oldQty = toStock.quantity;
+                                const oldAvgCost = toStock.average_cost;
+                                const newQty = item.quantity;
+                                
+                                const totalQty = oldQty + newQty;
+                                if (totalQty > 0) {
+                                    toStock.average_cost = ((oldQty * oldAvgCost) + (newQty * transferCost)) / totalQty;
+                                }
+                                toStock.quantity += newQty;
                             } else {
-                                // Important: Create a new stock item instance for the new location
-                                const newStockItem: Stock = {
-                                    ...fromStock,
-                                    id: `stk_hist_t_${doc.id}_${item.productId}`,
+                                stockState.set(toKey, {
+                                    id: toKey,
+                                    productId: item.productId,
                                     warehouseId: doc.to_warehouse_id,
                                     quantity: item.quantity,
-                                };
-                                stockState.set(toKey, newStockItem);
+                                    average_cost: transferCost,
+                                });
                             }
                          }
                     });
@@ -262,22 +265,36 @@ export const useMockData = () => {
       throw new Error(`Kredit limiti oshib ketdi! (${creditCheck.amount.toLocaleString('uz-UZ')} so'm). Hujjatni tasdiqlash mumkin emas.`);
     }
     
-    // Create new stock items from the receipt
-    const newStockItems: Stock[] = note.items.map(item => ({
-        id: `stk${Date.now()}_${Math.random()}`,
-        productId: item.productId,
-        warehouseId: note.warehouse_id,
-        quantity: item.quantity,
-        cost: item.price,
-        batch_number: item.batch_number,
-        expiry_date: item.expiry_date,
-        received_date: note.date,
-    }));
+    setStock(prevStock => {
+        const newStock = [...prevStock];
+        note.items.forEach(item => {
+            const key = `${item.productId}-${note.warehouse_id}`;
+            let stockItem = newStock.find(s => s.id === key);
 
-    // Update stock state
-    setStock(prevStock => [...prevStock, ...newStockItems]);
+            const oldQty = stockItem ? stockItem.quantity : 0;
+            const oldAvgCost = stockItem ? stockItem.average_cost : 0;
+            const newQty = item.quantity;
+            const newPrice = item.price;
+            
+            const totalQty = oldQty + newQty;
+            const newAvgCost = totalQty > 0 ? ((oldQty * oldAvgCost) + (newQty * newPrice)) / totalQty : 0;
+
+            if (stockItem) {
+                stockItem.quantity = totalQty;
+                stockItem.average_cost = newAvgCost;
+            } else {
+                newStock.push({
+                    id: key,
+                    productId: item.productId,
+                    warehouseId: note.warehouse_id,
+                    quantity: newQty,
+                    average_cost: newPrice,
+                });
+            }
+        });
+        return newStock;
+    });
     
-    // Update goods receipt status
     setGoodsReceipts(prevReceipts => 
         prevReceipts.map(n => n.id === noteId ? { ...n, status: DocumentStatus.CONFIRMED } : n)
     );
@@ -302,38 +319,26 @@ export const useMockData = () => {
     if (!note || note.status === DocumentStatus.CONFIRMED) return;
 
     setStock(prevStock => {
-        let tempStock = JSON.parse(JSON.stringify(prevStock)); // Deep copy to avoid mutation issues
+        let tempStock = JSON.parse(JSON.stringify(prevStock)); // Deep copy
         let errors: string[] = [];
         
         note.items.forEach(item => {
-            let remainingQty = item.quantity;
-            const stockBatches = getProductBatches(item.productId, note.warehouse_id, tempStock);
+            const stockItem = tempStock.find((s: Stock) => s.productId === item.productId && s.warehouseId === note.warehouse_id);
 
-            if (stockBatches.reduce((acc, s) => acc + s.quantity, 0) < item.quantity) {
+            if (!stockItem || stockItem.quantity < item.quantity) {
                 const productName = getProduct(item.productId)?.name || 'Noma\'lum mahsulot';
                 errors.push(`"${productName}" mahsuloti omborda yetarli emas!`);
                 return;
             }
-
-            for (const batch of stockBatches) {
-                if (remainingQty <= 0) break;
-                const qtyToTake = Math.min(remainingQty, batch.quantity);
-                const stockToUpdate = tempStock.find((s: Stock) => s.id === batch.id);
-                if (stockToUpdate) {
-                    stockToUpdate.quantity -= qtyToTake;
-                    remainingQty -= qtyToTake;
-                }
-            }
+            stockItem.quantity -= item.quantity;
         });
 
         if (errors.length > 0) {
             throw new Error(errors.join('\n'));
         }
 
-        // If validation is successful, update the write-off note's status
         setWriteOffs(prev => prev.map(n => n.id === noteId ? { ...n, status: DocumentStatus.CONFIRMED } : n));
         
-        // And return the new stock state
         return tempStock.filter((s: Stock) => s.quantity > 0.001);
     });
   }
@@ -356,42 +361,35 @@ export const useMockData = () => {
         let errors: string[] = [];
 
         note.items.forEach(item => {
-            const fromStockBatches = getProductBatches(item.productId, note.from_warehouse_id, tempStock);
+            const fromStock = tempStock.find(s => s.productId === item.productId && s.warehouseId === note.from_warehouse_id);
             
-            if (fromStockBatches.reduce((acc, s) => acc + s.quantity, 0) < item.quantity) {
+            if (!fromStock || fromStock.quantity < item.quantity) {
                 const productName = getProduct(item.productId)?.name;
                 errors.push(`"${productName}" jo'natuvchi omborda yetarli emas!`);
                 return;
             }
             
-            let remainingQtyToTransfer = item.quantity;
-            for (const batch of fromStockBatches) {
-                if (remainingQtyToTransfer <= 0) break;
-                const qtyToTake = Math.min(remainingQtyToTransfer, batch.quantity);
-                
-                const stockToUpdate = tempStock.find(s => s.id === batch.id);
-                if (stockToUpdate) {
-                    stockToUpdate.quantity -= qtyToTake;
-                }
+            const transferCost = fromStock.average_cost;
+            fromStock.quantity -= item.quantity;
 
-                // Check if a similar stock item already exists at the destination
-                const existingToStock = tempStock.find(s => s.productId === item.productId && s.warehouseId === note.to_warehouse_id && s.batch_number === batch.batch_number);
-                if(existingToStock) {
-                    existingToStock.quantity += qtyToTake;
-                } else {
-                    const newStockItem: Stock = {
-                        id: `stk${Date.now()}_${Math.random()}`,
-                        productId: item.productId,
-                        warehouseId: note.to_warehouse_id,
-                        quantity: qtyToTake,
-                        cost: batch.cost,
-                        batch_number: batch.batch_number,
-                        expiry_date: batch.expiry_date,
-                        received_date: batch.received_date, // Should this be transfer date? For now, keep original.
-                    };
-                    tempStock.push(newStockItem);
-                }
-                remainingQtyToTransfer -= qtyToTake;
+            let toStock = tempStock.find(s => s.productId === item.productId && s.warehouseId === note.to_warehouse_id);
+            if(toStock) {
+                const oldQty = toStock.quantity;
+                const oldAvgCost = toStock.average_cost;
+                const newQty = item.quantity;
+                
+                const totalQty = oldQty + newQty;
+                toStock.average_cost = totalQty > 0 ? ((oldQty * oldAvgCost) + (newQty * transferCost)) / totalQty : 0;
+                toStock.quantity = totalQty;
+            } else {
+                const newStockItem: Stock = {
+                    id: `${item.productId}-${note.to_warehouse_id}`,
+                    productId: item.productId,
+                    warehouseId: note.to_warehouse_id,
+                    quantity: item.quantity,
+                    average_cost: transferCost
+                };
+                tempStock.push(newStockItem);
             }
         });
 
@@ -420,43 +418,28 @@ export const useMockData = () => {
     const surplusItems: GoodsReceiptItem[] = [];
     const shortageItems: WriteOffItem[] = [];
     
-    const productIdsWithDiff = new Set(note.items.filter(i => i.difference !== 0).map(i => i.productId));
-
-    productIdsWithDiff.forEach(productId => {
-        const item = note.items.find(i => i.productId === productId)!;
+    note.items.forEach(item => {
         const difference = item.difference;
+        const stockItem = stock.find(s => s.productId === item.productId && s.warehouseId === note.warehouse_id);
+        const cost = stockItem ? stockItem.average_cost : 0;
         
         if(difference > 0) { // Ortiqcha
-            const batches = getProductBatches(productId, note.warehouse_id);
-            const lastCost = batches.length > 0 ? batches[batches.length-1].cost : 0;
             surplusItems.push({ 
                 productId: item.productId, 
                 quantity: difference, 
-                price: lastCost, 
-                batch_number: `INV-${note.doc_number}`,
-                expiry_date: undefined,
+                price: cost, // Use current average cost as price for surplus
             });
         } else if (difference < 0) { // Kamomad
-            let shortageToCover = Math.abs(difference);
-            const batches = getProductBatches(productId, note.warehouse_id);
-
-            for (const batch of batches) {
-                if (shortageToCover <= 0) break;
-                const quantityToWriteOff = Math.min(shortageToCover, batch.quantity);
-                shortageItems.push({
-                    productId: productId,
-                    batch_number: batch.batch_number,
-                    quantity: quantityToWriteOff,
-                    cost: batch.cost
-                });
-                shortageToCover -= quantityToWriteOff;
-            }
+            shortageItems.push({
+                productId: item.productId,
+                quantity: Math.abs(difference),
+                cost: cost,
+            });
         }
     });
 
-
     if (surplusItems.length > 0) {
-        const surplusNote = addAndConfirmGoodsReceipt({
+        addAndConfirmGoodsReceipt({
             date: note.date,
             supplier_id: 'SYSTEM',
             warehouse_id: note.warehouse_id,
@@ -485,7 +468,6 @@ export const useMockData = () => {
       const updatesToApply = new Map<string, number>();
       let amountToApply = paymentData.amount;
 
-      // Base the calculation on the current state of goodsReceipts
       const unpaidGrns = goodsReceipts
           .filter(g => g.supplier_id === paymentData.supplier_id && g.status === DocumentStatus.CONFIRMED && (getNoteTotal(g.items) - g.paid_amount) > 0.01)
           .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -510,7 +492,6 @@ export const useMockData = () => {
 
       setPayments(prev => [newPayment, ...prev]);
 
-      // Use functional update to avoid race conditions/stale state
       setGoodsReceipts(prevReceipts => 
           prevReceipts.map(r => {
               if (updatesToApply.has(r.id)) {
@@ -521,19 +502,21 @@ export const useMockData = () => {
       );
   }
 
-    const addDirectPaymentForNote = (noteId: string, paymentMethod: PaymentMethod, comment: string) => {
+    const addDirectPaymentForNote = (noteId: string, amount: number, paymentMethod: PaymentMethod, comment: string) => {
         const note = goodsReceipts.find(n => n.id === noteId);
         if (!note || note.status !== DocumentStatus.CONFIRMED) {
-          alert("Faqat tasdiqlangan hujjatlar uchun to'lov qilish mumkin.");
-          return;
+          throw new Error("Faqat tasdiqlangan hujjatlar uchun to'lov qilish mumkin.");
         }
         
         const total = getNoteTotal(note.items);
         const dueAmount = total - note.paid_amount;
         
-        if (dueAmount <= 0.01) { // use a small epsilon for float comparison
-          alert("Bu hujjat uchun qarz mavjud emas.");
-          return;
+        if (amount <= 0) {
+            throw new Error("To'lov summasi noldan katta bo'lishi kerak.");
+        }
+    
+        if (amount > dueAmount + 0.01) { // Add a small epsilon for float comparison
+            throw new Error(`To'lov summasi qarz miqdoridan (${formatCurrency(dueAmount)} so'm) oshib ketmasligi kerak.`);
         }
         
         const newPayment: Payment = {
@@ -541,9 +524,9 @@ export const useMockData = () => {
           doc_number: `P-${(payments.length + 1).toString().padStart(4, '0')}`,
           date: new Date().toISOString(),
           supplier_id: note.supplier_id,
-          amount: dueAmount,
+          amount: amount,
           payment_method: paymentMethod,
-          links: [{ grnId: noteId, amountApplied: dueAmount }],
+          links: [{ grnId: noteId, amountApplied: amount }],
           comment: comment || `"${note.doc_number}" hujjat uchun to'lov`,
         };
     
@@ -552,43 +535,18 @@ export const useMockData = () => {
         setGoodsReceipts(prevReceipts => 
           prevReceipts.map(r => {
             if (r.id === noteId) {
-              return { ...r, paid_amount: r.paid_amount + dueAmount };
+              return { ...r, paid_amount: r.paid_amount + amount };
             }
             return r;
           })
         );
       };
 
-  const generateNextBatchNumber = (productId: string) => {
-    if (!productId) return '';
-
-    // We only count confirmed documents for historical data
-    const notesWithProduct = goodsReceipts.filter(note => 
-        note.status === DocumentStatus.CONFIRMED && note.items.some(item => item.productId === productId)
-    );
-    
-    const totalCount = notesWithProduct.length + 1;
-
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-
-    const notesInCurrentMonth = notesWithProduct.filter(note => {
-        const noteDate = new Date(note.date);
-        return noteDate.getMonth() === currentMonth && noteDate.getFullYear() === currentYear;
-    });
-
-    const monthlyCount = notesInCurrentMonth.length + 1;
-
-    return `${monthlyCount}-${totalCount}`;
-  };
-
-
   return {
     products, addProduct, updateProduct, deleteProduct,
     warehouses, addWarehouse, updateWarehouse, deleteWarehouse,
     suppliers, addSupplier, updateSupplier, deleteSupplier, isInnUnique,
-    stock, getProductBatches, getTotalStockQuantity, getTotalStockAcrossWarehouses, getStockAsOf,
+    stock, getTotalStockQuantity, getTotalStockAcrossWarehouses, getStockAsOf,
     goodsReceipts, addGoodsReceipt, updateGoodsReceipt, deleteGoodsReceipt, confirmGoodsReceipt, addAndConfirmGoodsReceipt, getNoteTotal,
     writeOffs, addWriteOff, confirmWriteOff,
     internalTransfers, addInternalTransfer, confirmInternalTransfer,
@@ -596,7 +554,6 @@ export const useMockData = () => {
     payments, addPayment, addDirectPaymentForNote,
     getSupplierBalance,
     checkCreditLimit,
-    generateNextBatchNumber,
   };
 };
 

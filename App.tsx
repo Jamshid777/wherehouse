@@ -1,25 +1,20 @@
 
-
 import React, { useState, useMemo } from 'react';
-import { ProductsView } from './components/ProductsView';
-import { ManagementTabs } from './components/ManagementTabs';
 import { useMockData } from './hooks/useMockData';
 import { ProductIcon } from './components/icons/ProductIcon';
-import { WarehouseIcon } from './components/icons/WarehouseIcon';
-import { DocumentIcon } from './components/icons/DocumentIcon';
-import { DocumentsView } from './components/DocumentsView';
-import { ReportIcon } from './components/icons/ReportIcon';
-import { ReportsView } from './components/ReportsView';
+import { SupplierIcon } from './components/icons/SupplierIcon';
 import { SettingsIcon } from './components/icons/SettingsIcon';
 import { useSettings } from './hooks/useSettings';
 import { SettingsModal } from './components/SettingsModal';
 import { WarningIcon } from './components/icons/WarningIcon';
+import { ProductsHubView } from './components/ProductsHubView';
+import { SuppliersHubView } from './components/SuppliersHubView';
 
 
-type View = 'products' | 'management' | 'documents' | 'reports';
+type View = 'products' | 'suppliers';
 
 const App: React.FC = () => {
-  const [activeView, setActiveView] = useState<View>('reports');
+  const [activeView, setActiveView] = useState<View>('products');
   const [viewToOpen, setViewToOpen] = useState<{view: View, payload: any} | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
@@ -27,16 +22,25 @@ const App: React.FC = () => {
   const { defaultWarehouseId, setDefaultWarehouseId, appMode, setAppMode } = useSettings();
 
   const navigationItems = useMemo(() => [
-    { id: 'reports', label: 'Hisobotlar', icon: <ReportIcon className="h-5 w-5" /> },
-    { id: 'documents', label: 'Hujjatlar', icon: <DocumentIcon className="h-5 w-5" /> },
     { id: 'products', label: 'Mahsulotlar', icon: <ProductIcon className="h-5 w-5" /> },
-    { id: 'management', label: "Ombor va Ta'minot", icon: <WarehouseIcon className="h-5 w-5" /> },
+    { id: 'suppliers', label: "Ta'minotchilar", icon: <SupplierIcon className="h-5 w-5" /> },
   ], []);
   
-  const handleNavigation = (view: View, payload?: any) => {
-    setActiveView(view);
-    if(payload) {
-       setViewToOpen({view, payload});
+  const handleNavigation = (view: 'documents' | View, payload?: any) => {
+    let targetView: View;
+    let newPayload = payload;
+
+    if (view === 'documents') {
+        targetView = 'suppliers';
+        newPayload = { ...payload, targetTab: 'documents' };
+    } else {
+        targetView = view;
+    }
+    
+    setActiveView(targetView);
+
+    if (newPayload) {
+       setViewToOpen({view: targetView, payload: newPayload});
     } else {
         setViewToOpen(null);
     }
@@ -46,21 +50,22 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (activeView) {
       case 'products':
-        return <ProductsView dataManager={dataManager} />;
-      case 'management':
-        return <ManagementTabs dataManager={dataManager} />;
-      case 'documents':
-        return <DocumentsView 
+        return <ProductsHubView 
                  dataManager={dataManager} 
-                 newDocumentPayload={viewToOpen?.view === 'documents' ? viewToOpen.payload : null} 
-                 clearPayload={() => setViewToOpen(null)}
+                 navigate={handleNavigation}
                  defaultWarehouseId={defaultWarehouseId}
                  appMode={appMode}
                />;
-      case 'reports':
-        return <ReportsView dataManager={dataManager} navigate={handleNavigation} defaultWarehouseId={defaultWarehouseId} appMode={appMode} />;
+      case 'suppliers':
+        return <SuppliersHubView 
+                  dataManager={dataManager} 
+                  newDocumentPayload={viewToOpen?.view === 'suppliers' ? viewToOpen.payload : null} 
+                  clearPayload={() => setViewToOpen(null)}
+                  defaultWarehouseId={defaultWarehouseId}
+                  appMode={appMode}
+                />;
       default:
-        return <ReportsView dataManager={dataManager} navigate={handleNavigation} defaultWarehouseId={defaultWarehouseId} appMode={appMode} />;
+        return <ProductsHubView dataManager={dataManager} navigate={handleNavigation} defaultWarehouseId={defaultWarehouseId} appMode={appMode} />;
     }
   };
 

@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { GoodsReceiptNote, GoodsReceiptItem, DocumentStatus, PaymentStatus, Product, Supplier, PaymentMethod } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
@@ -106,7 +107,7 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
     setProductForNewNote(null);
   };
 
-    const handleSave = (data: { date: string; supplier_id: string; warehouse_id: string; items: GoodsReceiptItem[], paid_amount: number }) => {
+    const handleSave = (data: { date: string; supplier_id: string; warehouse_id: string; items: GoodsReceiptItem[], paid_amount: number, payment_method: PaymentMethod }) => {
         if (editingNote) {
             updateGoodsReceipt({ ...editingNote, ...data });
         } else {
@@ -467,7 +468,7 @@ const DebtPaymentModal: React.FC<DebtPaymentModalProps> = ({ isOpen, note, onClo
 interface GoodsReceiptFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: { date: string; supplier_id: string; warehouse_id: string; items: GoodsReceiptItem[], paid_amount: number }) => void;
+  onSubmit: (data: { date: string; supplier_id: string; warehouse_id: string; items: GoodsReceiptItem[], paid_amount: number, payment_method: PaymentMethod }) => void;
   note: GoodsReceiptNote | null;
   productForNewNote: Product | null;
   dataManager: UseMockDataReturnType;
@@ -486,17 +487,20 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
   defaultWarehouseId,
   appMode,
 }) => {
-  const { products, warehouses, suppliers, addProduct, addSupplier, updateSupplier, isInnUnique } = dataManager;
+  const { products, warehouses, suppliers, addProduct, updateProduct, addSupplier, updateSupplier, isInnUnique } = dataManager;
   
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     supplier_id: '',
     warehouse_id: '',
     paid_amount: 0,
+    payment_method: PaymentMethod.CASH,
   });
   const [items, setItems] = useState<GoodsReceiptItem[]>([]);
-  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
+  
+  const [productModalState, setProductModalState] = useState<{isOpen: boolean, product: Product | null, index: number | null}>({isOpen: false, product: null, index: null});
+  const [supplierModalState, setSupplierModalState] = useState<{isOpen: boolean, supplier: Supplier | null}>({isOpen: false, supplier: null});
+
 
   useEffect(() => {
     if (isOpen) {
@@ -506,6 +510,7 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
           supplier_id: note.supplier_id,
           warehouse_id: note.warehouse_id,
           paid_amount: note.paid_amount,
+          payment_method: note.payment_method || PaymentMethod.CASH
         });
         setItems(note.items.map(item => ({...item})));
       } else {
@@ -513,13 +518,13 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
         const validDate = new Date();
         validDate.setMonth(validDate.getMonth() + 6);
 
-        // Reset form for a new note
         const warehouseToSet = defaultWarehouseId || warehouses.find(w => w.is_active)?.id;
         setFormData({
           date: formatDate(defaultDate),
           supplier_id: suppliers.length > 0 ? suppliers[0].id : '',
           warehouse_id: warehouseToSet || '',
           paid_amount: 0,
+          payment_method: PaymentMethod.CASH
         });
         const newItem: GoodsReceiptItem = { 
             productId: '', 
@@ -550,7 +555,7 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
     
     if (field === 'productId') {
         if(value === 'new') {
-            setIsProductModalOpen(true);
+            setProductModalState({ isOpen: true, product: null, index });
             return;
         }
         (currentItem as any)[field] = value;
@@ -585,7 +590,6 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
         alert("Iltimos, har bir qatorda mahsulotni tanlang va miqdor, narxni to'g'ri kiriting.");
         return;
     }
-    // If in lite mode, ensure validDate is set
     const finalItems = items.map(item => {
         if (appMode === 'lite' && !item.validDate) {
             const validDate = new Date();
@@ -607,23 +611,17 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
   }, [items]);
 
   const handleProductFormSubmit = (productData: Omit<Product, 'id'> | Product) => {
-    let newProduct;
-    if('id' in productData){
-        // This modal shouldn't edit, but handle just in case
-        newProduct = productData;
+    if ('id' in productData) {
+        updateProduct(productData);
     } else {
-        newProduct = addProduct(productData);
+        const newProduct = addProduct(productData);
+        if (productModalState.index !== null) {
+            const newItems = [...items];
+            newItems[productModalState.index].productId = newProduct.id;
+            setItems(newItems);
+        }
     }
-    
-    const newItems = [...items];
-    const itemToUpdate = newItems.find(item => item.productId === 'new' || item.productId === '');
-    if(itemToUpdate) {
-        itemToUpdate.productId = newProduct.id;
-    } else { // Fallback to update the last item
-        newItems[items.length - 1].productId = newProduct.id;
-    }
-    setItems(newItems);
-    setIsProductModalOpen(false);
+    setProductModalState({isOpen: false, product: null, index: null});
   };
   
   const handleSupplierFormSubmit = (supplierData: Omit<Supplier, 'id'> | Supplier) => {
@@ -633,8 +631,17 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
         const newSupplier = addSupplier(supplierData);
         setFormData(prev => ({...prev, supplier_id: newSupplier.id}));
     }
-    setIsSupplierModalOpen(false);
+    setSupplierModalState({isOpen: false, supplier: null});
   };
+
+  const handleEditProductClick = (index: number) => {
+    const item = items[index];
+    if (!item.productId) return;
+    const productToEdit = products.find(p => p.id === item.productId);
+    if (productToEdit) {
+        setProductModalState({ isOpen: true, product: productToEdit, index });
+    }
+  }
 
   return (
     <>
@@ -646,7 +653,7 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
               <label htmlFor="date" className="block text-sm font-medium text-slate-700 mb-1">Sana</label>
               <input type="date" name="date" id="date" value={formData.date} onChange={handleHeaderChange} required className="w-full px-3 py-2.5 border border-slate-300 rounded-lg" />
             </div>
-            <div className="flex items-end gap-2">
+            <div className="flex items-end gap-1">
                 <div className="flex-grow">
                     <label htmlFor="supplier_id" className="block text-sm font-medium text-slate-700 mb-1">Yetkazib beruvchi</label>
                     <select name="supplier_id" id="supplier_id" value={formData.supplier_id} onChange={handleHeaderChange} required className="w-full px-3 py-2.5 border border-slate-300 rounded-lg">
@@ -654,7 +661,20 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                       {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                 </div>
-                <button type="button" onClick={() => setIsSupplierModalOpen(true)} className="p-2.5 bg-slate-200 rounded-lg hover:bg-slate-300 transition-colors"><PlusIcon className="h-5 w-5"/></button>
+                <button type="button" onClick={() => setSupplierModalState({ isOpen: true, supplier: null })} title="Yangi qo'shish" className="p-2.5 bg-slate-200 rounded-lg hover:bg-slate-300 transition-colors"><PlusIcon className="h-5 w-5"/></button>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    const supplierToEdit = suppliers.find(s => s.id === formData.supplier_id);
+                    if (supplierToEdit) {
+                        setSupplierModalState({ isOpen: true, supplier: supplierToEdit });
+                    }
+                  }} 
+                  disabled={!formData.supplier_id}
+                  title="Tahrirlash"
+                  className="p-2.5 bg-slate-200 rounded-lg hover:bg-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <EditIcon className="h-5 w-5"/>
+                </button>
             </div>
             <div>
               <label htmlFor="warehouse_id" className="block text-sm font-medium text-slate-700 mb-1">Ombor</label>
@@ -684,15 +704,25 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                   {items.map((item, index) => (
                     <tr key={index} className="border-b">
                       <td className="p-1">
-                        <select
-                          value={item.productId}
-                          onChange={(e) => handleItemChange(index, 'productId', e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-md"
-                        >
-                          <option value="" disabled>Mahsulotni tanlang...</option>
-                          <option value="new" className="font-bold text-amber-600">... Yangi mahsulot qo'shish</option>
-                          {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>)}
-                        </select>
+                        <div className="flex items-center gap-1">
+                            <select
+                              value={item.productId}
+                              onChange={(e) => handleItemChange(index, 'productId', e.target.value)}
+                              className="w-full px-3 py-2 border border-slate-300 rounded-md flex-grow"
+                            >
+                              <option value="" disabled>Mahsulotni tanlang...</option>
+                              <option value="new" className="font-bold text-amber-600">... Yangi mahsulot qo'shish</option>
+                              {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>)}
+                            </select>
+                            <button 
+                                type="button" 
+                                onClick={() => handleEditProductClick(index)} 
+                                disabled={!item.productId || item.productId === 'new'} 
+                                title="Tahrirlash"
+                                className="p-2 bg-slate-100 rounded-md hover:bg-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                <EditIcon className="h-5 w-5"/>
+                            </button>
+                        </div>
                       </td>
                       <td className="p-1"><input type="number" value={item.quantity} onChange={e => handleItemChange(index, 'quantity', e.target.value)} min="0.01" step="any" className="w-full px-3 py-2 border border-slate-300 rounded-md" required /></td>
                       <td className="p-1"><input type="number" value={item.price} onChange={e => handleItemChange(index, 'price', e.target.value)} min="0" step="any" className="w-full px-3 py-2 border border-slate-300 rounded-md" required /></td>
@@ -712,10 +742,26 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
           </div>
           
           {/* Footer */}
-          <div className="flex justify-between items-center pt-4 border-t">
-            <div className="flex items-center gap-2">
-                <label htmlFor="paid_amount" className="text-sm font-medium text-slate-700">Oldindan to'lov:</label>
-                <input type="number" id="paid_amount" name="paid_amount" value={formData.paid_amount} onChange={handleHeaderChange} min="0" step="any" className="w-40 px-3 py-2 border border-slate-300 rounded-md"/>
+          <div className="flex justify-between items-center pt-4 border-t flex-wrap gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-2">
+                    <label htmlFor="paid_amount" className="text-sm font-medium text-slate-700">Oldindan to'lov:</label>
+                    <input type="number" id="paid_amount" name="paid_amount" value={formData.paid_amount} onChange={handleHeaderChange} min="0" step="any" className="w-40 px-3 py-2 border border-slate-300 rounded-md"/>
+                </div>
+                {formData.paid_amount > 0 && (
+                     <div className="flex items-center gap-2">
+                        <label htmlFor="payment_method" className="text-sm font-medium text-slate-700">To'lov usuli:</label>
+                        <select 
+                            name="payment_method" 
+                            id="payment_method" 
+                            value={formData.payment_method} 
+                            onChange={handleHeaderChange} 
+                            className="w-40 px-3 py-2 border border-slate-300 rounded-md"
+                        >
+                           {Object.values(PaymentMethod).map(m => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                    </div>
+                )}
             </div>
             <div className="text-right">
               <span className="text-sm text-slate-600">Jami summa: </span>
@@ -732,16 +778,16 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
       </Modal>
 
       <ProductFormModal 
-        isOpen={isProductModalOpen}
-        onClose={() => setIsProductModalOpen(false)}
+        isOpen={productModalState.isOpen}
+        onClose={() => setProductModalState({isOpen: false, product: null, index: null})}
         onSubmit={handleProductFormSubmit}
-        product={null}
+        product={productModalState.product}
       />
       <SupplierFormModal
-        isOpen={isSupplierModalOpen}
-        onClose={() => setIsSupplierModalOpen(false)}
+        isOpen={supplierModalState.isOpen}
+        onClose={() => setSupplierModalState({isOpen: false, supplier: null})}
         onSubmit={handleSupplierFormSubmit}
-        supplier={null}
+        supplier={supplierModalState.supplier}
         isInnUnique={isInnUnique}
       />
     </>

@@ -42,7 +42,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({ dataManager }) =
   }
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-md">
+    <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-slate-800">Omborlar Ro'yxati</h2>
         <button

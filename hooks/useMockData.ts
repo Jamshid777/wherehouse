@@ -1,4 +1,5 @@
 
+
 import { useState } from 'react';
 import { 
     Product, Warehouse, Supplier, Unit, Stock,
@@ -7,7 +8,8 @@ import {
     InternalTransferNote, InternalTransferItem,
     InventoryNote, InventoryItem,
     Payment, PaymentMethod, PaymentLink,
-    GoodsReturnNote, GoodsReturnItem
+    GoodsReturnNote, GoodsReturnItem,
+    Dish, Recipe
 } from '../types';
 
 const initialProducts: Product[] = [
@@ -16,6 +18,10 @@ const initialProducts: Product[] = [
   { id: 'p3', name: 'Tuz', sku: 'SLT-001', category: 'Bakaleya', unit: Unit.KG, min_stock: 20 },
   { id: 'p4', name: 'Kungaboqar yog\'i', sku: 'OIL-001', category: 'Yog\'lar', unit: Unit.L, min_stock: 30 },
   { id: 'p5', name: 'Tuxum', sku: 'EGG-001', category: 'Sut mahsulotlari', unit: Unit.DONA, min_stock: 200 },
+  { id: 'p6', name: 'Guruch (Lazer)', sku: 'RICE-001', category: 'Bakaleya', unit: Unit.KG, min_stock: 50 },
+  { id: 'p7', name: 'Go\'sht (Mol)', sku: 'MEAT-001', category: 'Go\'sht', unit: Unit.KG, min_stock: 20 },
+  { id: 'p8', name: 'Sabzi (Sariq)', sku: 'CRRT-001', category: 'Sabzavotlar', unit: Unit.KG, min_stock: 30 },
+  { id: 'p9', name: 'Piyoz', sku: 'ONN-001', category: 'Sabzavotlar', unit: Unit.KG, min_stock: 25 },
 ];
 
 const initialWarehouses: Warehouse[] = [
@@ -34,13 +40,43 @@ const initialStock: Stock[] = [
     { batchId: 'grn2-i0', productId: 'p2', warehouseId: 'w1', quantity: 80, cost: 11000, receiptDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), validDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString() },
     { batchId: 'grn2-i1', productId: 'p4', warehouseId: 'w1', quantity: 15, cost: 18000, receiptDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), validDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString() },
     { batchId: 'grn3-i0', productId: 'p1', warehouseId: 'w2', quantity: 30, cost: 5200, receiptDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), validDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString() },
+    { batchId: 'grn4-i0', productId: 'p6', warehouseId: 'w1', quantity: 10, cost: 25000, receiptDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), validDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString() },
+    { batchId: 'grn4-i1', productId: 'p7', warehouseId: 'w1', quantity: 5, cost: 85000, receiptDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), validDate: new Date(new Date().setDate(new Date().getDate() + 10)).toISOString() },
+    { batchId: 'grn4-i2', productId: 'p8', warehouseId: 'w1', quantity: 8.5, cost: 5000, receiptDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), validDate: new Date(new Date().setDate(new Date().getDate() + 15)).toISOString() },
+    { batchId: 'grn4-i3', productId: 'p9', warehouseId: 'w1', quantity: 12, cost: 4000, receiptDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), validDate: new Date(new Date().setDate(new Date().getDate() + 25)).toISOString() },
 ];
 
 const initialGoodsReceipts: GoodsReceiptNote[] = [
     { id: 'grn1', doc_number: 'K-0001', supplier_id: 's1', warehouse_id: 'w1', date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p1', quantity: 100, price: 5000, batchId: 'grn1-i0', validDate: new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString() }], paid_amount: 500000 },
-    { id: 'grn2', doc_number: 'K-0002', supplier_id: 's2', warehouse_id: 'w1', date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p2', quantity: 200, price: 11500, batchId: 'grn2-i0', validDate: new Date(new Date().setMonth(new Date().getMonth() + 12)).toISOString() }], paid_amount: 1000000 },
+    { id: 'grn2', doc_number: 'K-0002', supplier_id: 's2', warehouse_id: 'w1', date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p2', quantity: 200, price: 11500, batchId: 'grn2-i0', validDate: new Date(new Date().setMonth(new Date().getMonth() + 12)).toISOString() }, {productId: 'p4', quantity: 15, price: 18000, batchId: 'grn2-i1', validDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString()}], paid_amount: 1000000 },
     { id: 'grn3', doc_number: 'K-0003', supplier_id: 's1', warehouse_id: 'w2', date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p5', quantity: 1000, price: 1400, batchId: 'grn3-i0', validDate: new Date(new Date().setDate(new Date().getDate() + 20)).toISOString() }], paid_amount: 0 },
+    { id: 'grn4', doc_number: 'K-0004', supplier_id: 's1', warehouse_id: 'w1', date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [
+        {productId: 'p6', quantity: 10, price: 25000, batchId: 'grn4-i0', validDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString() },
+        {productId: 'p7', quantity: 5, price: 85000, batchId: 'grn4-i1', validDate: new Date(new Date().setDate(new Date().getDate() + 10)).toISOString() },
+        {productId: 'p8', quantity: 8.5, price: 5000, batchId: 'grn4-i2', validDate: new Date(new Date().setDate(new Date().getDate() + 15)).toISOString() },
+        {productId: 'p9', quantity: 12, price: 4000, batchId: 'grn4-i3', validDate: new Date(new Date().setDate(new Date().getDate() + 25)).toISOString() }
+    ], paid_amount: 0 },
 ]
+
+const initialDishes: Dish[] = [
+  { id: 'd1', name: 'Osh', unit: Unit.PORTSIYA, techCardUrl: 'https://technologicalcardeditor-production.up.railway.app/' },
+  { id: 'd2', name: 'Lag\'mon', unit: Unit.PORTSIYA, techCardUrl: 'https://technologicalcardeditor-production.up.railway.app/' },
+  { id: 'd3', name: 'Somsa (go\'shtli)', unit: Unit.DONA, techCardUrl: 'https://technologicalcardeditor-production.up.railway.app/' },
+  { id: 'd4', name: 'Mastava', unit: Unit.PORTSIYA, techCardUrl: 'https://technologicalcardeditor-production.up.railway.app/' },
+  { id: 'd5', name: 'Sho\'rva', unit: Unit.PORTSIYA, techCardUrl: 'https://technologicalcardeditor-production.up.railway.app/' },
+];
+
+const initialRecipes: Recipe[] = [
+    { dishId: 'd1', items: [
+        { productId: 'p6', quantity: 0.1 }, // Guruch
+        { productId: 'p7', quantity: 0.1 }, // Go'sht
+        { productId: 'p8', quantity: 0.1 }, // Sabzi
+        { productId: 'p9', quantity: 0.05 }, // Piyoz
+        { productId: 'p4', quantity: 0.03 }, // Yog'
+    ]},
+    // ... add more recipes later
+];
+
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('uz-UZ').format(amount);
 
@@ -55,6 +91,9 @@ export const useMockData = () => {
   const [inventoryNotes, setInventoryNotes] = useState<InventoryNote[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [goodsReturns, setGoodsReturns] = useState<GoodsReturnNote[]>([]);
+  const [dishes, setDishes] = useState<Dish[]>(initialDishes);
+  const [recipes, setRecipes] = useState<Recipe[]>(initialRecipes);
+
 
   // Helpers
   const getTotalStockQuantity = (productId: string, warehouseId: string, currentStock: Stock[] = stock) => {
@@ -68,6 +107,25 @@ export const useMockData = () => {
   }
   const getProduct = (productId: string) => products.find(p => p.id === productId);
   const getNoteTotal = (items: GoodsReceiptItem[]) => items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  const calculateProducibleQuantity = (dishId: string, warehouseId: string): number => {
+    const recipe = recipes.find(r => r.dishId === dishId);
+    if (!recipe) return 0;
+
+    let maxPortions = Infinity;
+
+    for (const ingredient of recipe.items) {
+        const ingredientStock = getTotalStockQuantity(ingredient.productId, warehouseId);
+        if (ingredient.quantity <= 0) continue; // Avoid division by zero
+        const portionsFromIngredient = ingredientStock / ingredient.quantity;
+        if (portionsFromIngredient < maxPortions) {
+            maxPortions = portionsFromIngredient;
+        }
+    }
+
+    return maxPortions === Infinity ? 0 : Math.floor(maxPortions);
+  };
+
 
   const getSupplierBalance = (supplierId: string) => {
       const supplier = suppliers.find(s => s.id === supplierId);
@@ -135,9 +193,9 @@ export const useMockData = () => {
         for (const doc of allDocs) {
             switch (doc.docType) {
                 case 'receipt':
-                    doc.items.forEach(item => {
+                    doc.items.forEach((item, index) => {
                         historicalStock.push({
-                            batchId: item.batchId,
+                            batchId: `${doc.id}-i${index}`,
                             productId: item.productId,
                             warehouseId: doc.warehouse_id,
                             quantity: item.quantity,
@@ -295,10 +353,25 @@ export const useMockData = () => {
     if (creditCheck.exceeds) {
       throw new Error(`Kredit limiti oshib ketdi! (${creditCheck.amount.toLocaleString('uz-UZ')} so'm). Hujjatni tasdiqlash mumkin emas.`);
     }
+
+    // Create payment if there's a prepayment
+    if (note.paid_amount > 0) {
+        const newPayment: Payment = {
+          id: `pay${Date.now()}`,
+          doc_number: `P-${(payments.length + 1).toString().padStart(4, '0')}`,
+          date: note.date,
+          supplier_id: note.supplier_id,
+          amount: note.paid_amount,
+          payment_method: note.payment_method || PaymentMethod.CASH,
+          links: [{ grnId: note.id, amountApplied: note.paid_amount }],
+          comment: `"${note.doc_number}" hujjat uchun dastlabki to'lov`,
+        };
+        setPayments(prev => [newPayment, ...prev]);
+    }
     
     setStock(prevStock => {
-        const newBatches = note.items.map(item => ({
-            batchId: item.batchId,
+        const newBatches = note.items.map((item, index) => ({
+            batchId: `${note.id}-i${index}`,
             productId: item.productId,
             warehouseId: note.warehouse_id,
             quantity: item.quantity,
@@ -627,6 +700,9 @@ export const useMockData = () => {
     inventoryNotes, addInventoryNote, updateInventoryNote, confirmInventoryNote,
     goodsReturns, addGoodsReturn, updateGoodsReturn, confirmGoodsReturn,
     payments, addPayment, addDirectPaymentForNote,
+    dishes,
+    recipes,
+    calculateProducibleQuantity,
     getSupplierBalance,
     checkCreditLimit,
   };

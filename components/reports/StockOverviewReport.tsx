@@ -1,12 +1,12 @@
 
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { UseMockDataReturnType } from '../../hooks/useMockData';
 import { Product, Warehouse, Stock, Unit } from '../../types';
 import { SearchIcon } from '../icons/SearchIcon';
 import { PlusIcon } from '../icons/PlusIcon';
 import { ChevronDownIcon } from '../icons/ChevronDownIcon';
+import { ProductTurnoverModal } from './ProductTurnoverModal';
 
 interface StockOverviewReportProps {
     dataManager: UseMockDataReturnType;
@@ -38,6 +38,7 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
     const [lowStockReportData, setLowStockReportData] = useState<LowStockProduct[] | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+    const [turnoverModalData, setTurnoverModalData] = useState<{ product: Product, warehouse: Warehouse } | null>(null);
 
     const [filters, setFilters] = useState({
         asOfDate: formatDate(new Date()),
@@ -65,6 +66,10 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
             }
             return newSet;
         });
+    };
+    
+    const handleRowClick = (product: Product, warehouse: Warehouse) => {
+        setTurnoverModalData({ product, warehouse });
     };
 
     const balanceCategories = useMemo(() => {
@@ -216,7 +221,7 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
                                         <th className="px-4 py-3 text-left font-medium border-r border-slate-200">Mahsulot / Ombor</th>
                                         <th className="px-4 py-3 text-left font-medium border-r border-slate-200">Kategoriya</th>
                                         <th className="px-4 py-3 text-right font-medium border-r border-slate-200">Jami Miqdor</th>
-                                        <th className="px-4 py-3 text-right font-medium border-r border-slate-200">O'rtacha Tannarx</th>
+                                        <th className="px-4 py-3 text-right font-medium border-r border-slate-200">Tannarx</th>
                                         <th className="px-4 py-3 text-right font-medium border-r border-slate-200">Jami Summa</th>
                                         <th className="px-4 py-3 text-center font-medium"></th>
                                     </tr>
@@ -226,19 +231,62 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
                                         const { product, warehouse, totalQty, totalValue, batches } = data;
                                         const key = `${product.id}-${warehouse.id}`;
                                         const avgCost = totalQty > 0 ? totalValue / totalQty : 0;
+                                        const lastBatch = batches.length > 0
+                                            ? batches.reduce((latest, current) => 
+                                                new Date(current.receiptDate) > new Date(latest.receiptDate) ? current : latest
+                                              )
+                                            : null;
+                                        const lastCost = lastBatch ? lastBatch.cost : 0;
                                         const isExpanded = expandedRows.has(key);
+                                        
+                                        let costIndicator = null;
+                                        if (lastCost > 0 && avgCost > 0) {
+                                            // Add a small tolerance for float comparison
+                                            if (lastCost > avgCost * 1.001) {
+                                                costIndicator = <span className="text-red-500 font-bold" title="Oxirgi narx ko'tarilgan">▲</span>;
+                                            } else if (lastCost < avgCost * 0.999) {
+                                                costIndicator = <span className="text-green-500 font-bold" title="Oxirgi narx tushgan">▼</span>;
+                                            }
+                                        }
+
+
                                         return (
                                             <React.Fragment key={key}>
-                                                <tr onClick={() => appMode === 'pro' && handleToggleExpand(key)} className={`hover:bg-slate-50 border-t ${appMode === 'pro' ? 'cursor-pointer' : ''}`}>
+                                                <tr className="hover:bg-slate-50 border-t">
                                                     <td className="px-4 py-3 font-medium text-slate-900 border-r border-slate-200">
-                                                        <div className="flex items-center gap-2">
-                                                            {appMode === 'pro' && <ChevronDownIcon className={`h-4 w-4 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />}
-                                                            {product.name}<span className="ml-2 text-xs text-slate-500 font-normal">({warehouse.name})</span>
+                                                        <div 
+                                                            className={`flex items-center gap-2 ${appMode === 'pro' ? 'cursor-pointer' : ''}`}
+                                                            onClick={appMode === 'pro' ? () => handleToggleExpand(key) : undefined}
+                                                            title={appMode === 'pro' ? "Partiyalarni ko'rish" : undefined}
+                                                        >
+                                                            {appMode === 'pro' && (
+                                                                <ChevronDownIcon className={`h-4 w-4 text-slate-500 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
+                                                            )}
+                                                            <span className="flex-grow">{product.name}<span className="ml-2 text-xs text-slate-500 font-normal">({warehouse.name})</span></span>
                                                         </div>
                                                     </td>
                                                     <td className="px-4 py-3 text-slate-600 border-r border-slate-200">{product.category}</td>
-                                                    <td className="px-4 py-3 text-right font-mono font-semibold text-slate-800 border-r border-slate-200">{totalQty.toFixed(2)} <span className="text-xs text-slate-500">{product.unit}</span></td>
-                                                    <td className="px-4 py-3 text-right font-mono text-slate-600 border-r border-slate-200">{formatCurrency(avgCost)}</td>
+                                                    <td className="px-4 py-3 text-right font-mono font-semibold text-slate-800 border-r border-slate-200">
+                                                        <div 
+                                                            onClick={() => handleRowClick(product, warehouse)}
+                                                            className="inline-flex items-center justify-end gap-1.5 group transition-colors hover:text-amber-600 cursor-pointer"
+                                                            title="Kunlik harakatni ko'rish"
+                                                        >
+                                                            <span>{totalQty.toFixed(2)} <span className="text-xs text-slate-500 font-normal">{product.unit}</span></span>
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400 group-hover:text-amber-600 transition-transform transform group-hover:scale-110" viewBox="0 0 20 20" fill="currentColor">
+                                                              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3 font-mono border-r border-slate-200" title={`O'rtacha: ${formatCurrency(avgCost)}\nOxirgi: ${formatCurrency(lastCost)}`}>
+                                                        <div className="flex items-center justify-end gap-x-2">
+                                                            {costIndicator}
+                                                            <div className="text-right">
+                                                                <div className="font-semibold text-slate-800">{formatCurrency(avgCost)}</div>
+                                                                <div className="text-xs text-slate-500">({formatCurrency(lastCost)})</div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
                                                     <td className="px-4 py-3 text-right font-mono font-bold text-slate-800 border-r border-slate-200">{formatCurrency(totalValue)}</td>
                                                     <td className="px-4 py-3 text-center">
                                                         <button onClick={(e) => { e.stopPropagation(); handleQuickReceipt(product); }} title="Tezkor kirim" className="p-1.5 rounded-full text-amber-600 hover:bg-amber-100 transition-colors">
@@ -334,6 +382,14 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
                      </div>
                  )}
             </div>
+             <ProductTurnoverModal
+                isOpen={!!turnoverModalData}
+                onClose={() => setTurnoverModalData(null)}
+                product={turnoverModalData?.product || null}
+                warehouse={turnoverModalData?.warehouse || null}
+                asOfDate={filters.asOfDate}
+                dataManager={dataManager}
+            />
         </div>
     );
 };

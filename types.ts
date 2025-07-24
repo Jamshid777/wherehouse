@@ -2,6 +2,7 @@ export enum Unit {
   KG = 'kg',
   L = 'l',
   DONA = 'dona',
+  PORTSIYA = 'portsiya',
 }
 
 export interface Product {
@@ -70,6 +71,7 @@ export interface GoodsReceiptNote {
   items: GoodsReceiptItem[];
   type?: 'receipt' | 'inventory_surplus';
   paid_amount: number; // For accounts payable tracking
+  payment_method?: PaymentMethod; // Temporary holder for payment on creation
 }
 
 // 3.2 Chiqim Hujjati (Write-off Act)
@@ -177,4 +179,24 @@ export interface Payment {
     payment_method: PaymentMethod;
     links: PaymentLink[];
     comment: string;
+}
+
+// ===============================================
+// NEW TYPES FOR PRODUCTION
+// ===============================================
+export interface RecipeItem {
+  productId: string;
+  quantity: number; // required per one unit of the dish
+}
+
+export interface Recipe {
+  dishId: string;
+  items: RecipeItem[];
+}
+
+export interface Dish {
+  id: string;
+  name: string;
+  unit: Unit;
+  techCardUrl: string;
 }

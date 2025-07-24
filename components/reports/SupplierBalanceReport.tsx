@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { UseMockDataReturnType } from '../../hooks/useMockData';
 import { DocumentStatus, GoodsReceiptNote, Payment, GoodsReceiptItem, Product, GoodsReturnNote } from '../../types';
@@ -211,6 +212,19 @@ export const SupplierBalanceReport: React.FC<SupplierBalanceReportProps> = ({ da
                                                             )
                                                         })}
                                                     </tbody>
+                                                     <tfoot className="border-t-2 border-slate-300">
+                                                        <tr>
+                                                            <td colSpan={3} className="px-2 py-2 font-bold text-slate-700 text-base text-right border-r border-slate-200">
+                                                                Yakuniy qoldiq:
+                                                            </td>
+                                                            <td 
+                                                                colSpan={2} 
+                                                                className={`px-2 py-2 text-right font-mono font-bold text-lg ${d.balance > 0 ? 'text-red-600' : d.balance < 0 ? 'text-green-600' : 'text-slate-800'}`}
+                                                            >
+                                                                {formatCurrency(d.balance)}
+                                                            </td>
+                                                        </tr>
+                                                    </tfoot>
                                                 </table>
                                              </div>
                                         </td>

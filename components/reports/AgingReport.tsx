@@ -4,12 +4,14 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { UseMockDataReturnType } from '../../hooks/useMockData';
 import { DocumentStatus } from '../../types';
 import { Modal } from '../Modal';
+import { ChevronDownIcon } from '../icons/ChevronDownIcon';
 
 interface AgingReportProps {
     dataManager: UseMockDataReturnType;
 }
 
 interface AgingDocumentDetail {
+    docId: string;
     docNumber: string;
     date: string;
     amount: number;
@@ -34,11 +36,12 @@ const formatCurrency = (amount: number) => new Intl.NumberFormat('uz-UZ').format
 const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
 export const AgingReport: React.FC<AgingReportProps> = ({ dataManager }) => {
-    const { goodsReceipts, suppliers, payments, getNoteTotal } = dataManager;
+    const { goodsReceipts, suppliers, payments, getNoteTotal, products } = dataManager;
     const [reportData, setReportData] = useState<AgingData[] | null>(null);
     const [asOfDate, setAsOfDate] = useState(formatDate(new Date()));
     const [isLoading, setIsLoading] = useState(true);
     const [modalData, setModalData] = useState<{ title: string; docs: AgingDocumentDetail[] } | null>(null);
+    const [expandedModalDocs, setExpandedModalDocs] = useState<Set<string>>(new Set());
 
     const handleGenerateReport = () => {
         setIsLoading(true);
@@ -49,13 +52,14 @@ export const AgingReport: React.FC<AgingReportProps> = ({ dataManager }) => {
 
         suppliers.forEach(s => {
             const initialDebt = s.initial_balance > 0 ? s.initial_balance : 0;
+            const initialDebtDoc: AgingDocumentDetail = { docNumber: "Boshlang'ich qoldiq", date: 'N/A', amount: initialDebt, docId: `initial_${s.id}` };
             agingMap.set(s.id, {
                 supplierId: s.id,
                 supplierName: s.name,
                 bucket1: { total: 0, docs: [] },
                 bucket2: { total: 0, docs: [] },
                 bucket3: { total: 0, docs: [] },
-                bucket4: { total: initialDebt, docs: initialDebt > 0 ? [{ docNumber: "Boshlang'ich qoldiq", date: 'N/A', amount: initialDebt }] : [] },
+                bucket4: { total: initialDebt, docs: initialDebt > 0 ? [initialDebtDoc] : [] },
                 total: initialDebt,
             });
         });
@@ -73,7 +77,7 @@ export const AgingReport: React.FC<AgingReportProps> = ({ dataManager }) => {
             let supplierPayments = paymentPool.get(s.id) || 0;
             if(supplierPayments > 0) {
                 const agingData = agingMap.get(s.id)!;
-                const initialDebtDoc = agingData.bucket4.docs.find(d => d.docNumber === "Boshlang'ich qoldiq");
+                const initialDebtDoc = agingData.bucket4.docs.find(d => d.docId.startsWith('initial_'));
                  if (initialDebtDoc) {
                     const paidToInitial = Math.min(supplierPayments, initialDebtDoc.amount);
                     initialDebtDoc.amount -= paidToInitial;
@@ -104,7 +108,7 @@ export const AgingReport: React.FC<AgingReportProps> = ({ dataManager }) => {
                 const diffTime = targetDate.getTime() - noteDate.getTime();
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 
-                const docDetail: AgingDocumentDetail = { docNumber: note.doc_number, date: note.date, amount: balance };
+                const docDetail: AgingDocumentDetail = { docId: note.id, docNumber: note.doc_number, date: note.date, amount: balance };
                 
                 if (diffDays <= 30) {
                     agingData.bucket1.total += balance;
@@ -164,6 +168,20 @@ export const AgingReport: React.FC<AgingReportProps> = ({ dataManager }) => {
     
     const handleCloseModal = () => {
         setModalData(null);
+        setExpandedModalDocs(new Set());
+    };
+
+    const toggleModalDocExpand = (docId: string) => {
+        if (docId.startsWith('initial_')) return;
+        setExpandedModalDocs(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(docId)) {
+                newSet.delete(docId);
+            } else {
+                newSet.add(docId);
+            }
+            return newSet;
+        });
     };
 
     return (
@@ -260,8 +278,8 @@ export const AgingReport: React.FC<AgingReportProps> = ({ dataManager }) => {
                         )}
                     </div>
                     {modalData && (
-                        <Modal isOpen={!!modalData} onClose={handleCloseModal} title={modalData.title} size="lg">
-                            <div className="overflow-x-auto">
+                        <Modal isOpen={!!modalData} onClose={handleCloseModal} title={modalData.title} size="2xl">
+                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm border-collapse">
                                     <thead className="text-xs text-slate-500 uppercase bg-slate-50">
                                         <tr>
@@ -271,13 +289,61 @@ export const AgingReport: React.FC<AgingReportProps> = ({ dataManager }) => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-200">
-                                        {modalData.docs.map((doc, index) => (
-                                            <tr key={index}>
-                                                <td className="px-4 py-2 font-medium border-r border-slate-200">{doc.docNumber}</td>
-                                                <td className="px-4 py-2 border-r border-slate-200">{doc.date === 'N/A' ? 'N/A' : new Date(doc.date).toLocaleDateString()}</td>
-                                                <td className="px-4 py-2 font-mono text-right">{formatCurrency(doc.amount)}</td>
-                                            </tr>
-                                        ))}
+                                        {modalData.docs.map(doc => {
+                                            const isExpandable = !doc.docId.startsWith('initial_');
+                                            const isExpanded = expandedModalDocs.has(doc.docId);
+                                            const noteDetails = isExpandable ? goodsReceipts.find(gr => gr.id === doc.docId) : null;
+                                            
+                                            return (
+                                                <React.Fragment key={doc.docId}>
+                                                    <tr 
+                                                        className={isExpandable ? "cursor-pointer hover:bg-slate-50" : ""}
+                                                        onClick={() => toggleModalDocExpand(doc.docId)}
+                                                    >
+                                                        <td className="px-4 py-2 font-medium border-r border-slate-200">
+                                                            <div className="flex items-center gap-2">
+                                                                {isExpandable && <ChevronDownIcon className={`h-4 w-4 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />}
+                                                                {doc.docNumber}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-2 border-r border-slate-200">{doc.date === 'N/A' ? 'N/A' : new Date(doc.date).toLocaleDateString()}</td>
+                                                        <td className="px-4 py-2 font-mono text-right">{formatCurrency(doc.amount)}</td>
+                                                    </tr>
+                                                    {isExpanded && noteDetails && (
+                                                        <tr>
+                                                            <td colSpan={3} className="p-2 bg-slate-50">
+                                                                <div className="bg-white p-3 rounded-md border">
+                                                                    <h5 className="font-semibold text-slate-700 text-xs mb-2">Hujjat tarkibi:</h5>
+                                                                    <table className="w-full text-xs">
+                                                                        <thead>
+                                                                            <tr className="border-b">
+                                                                                <th className="p-1 text-left font-medium">Mahsulot</th>
+                                                                                <th className="p-1 text-right font-medium">Miqdor</th>
+                                                                                <th className="p-1 text-right font-medium">Narx</th>
+                                                                                <th className="p-1 text-right font-medium">Summa</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {noteDetails.items.map((item, itemIdx) => {
+                                                                                const product = products.find(p => p.id === item.productId);
+                                                                                return (
+                                                                                    <tr key={itemIdx} className="border-b last:border-b-0">
+                                                                                        <td className="p-1.5">{product?.name || 'Noma\'lum'}</td>
+                                                                                        <td className="p-1.5 text-right font-mono">{item.quantity}</td>
+                                                                                        <td className="p-1.5 text-right font-mono">{formatCurrency(item.price)}</td>
+                                                                                        <td className="p-1.5 text-right font-mono">{formatCurrency(item.quantity * item.price)}</td>
+                                                                                    </tr>
+                                                                                )
+                                                                            })}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </React.Fragment>
+                                            )
+                                        })}
                                     </tbody>
                                     <tfoot className="bg-slate-50 font-bold">
                                         <tr>

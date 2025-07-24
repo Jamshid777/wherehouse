@@ -1,14 +1,14 @@
 
 import React, { useState, useMemo } from 'react';
-import { useMockData } from './hooks/useMockData';
-import { ProductIcon } from './components/icons/ProductIcon';
-import { SupplierIcon } from './components/icons/SupplierIcon';
-import { SettingsIcon } from './components/icons/SettingsIcon';
-import { useSettings } from './hooks/useSettings';
-import { SettingsModal } from './components/SettingsModal';
-import { WarningIcon } from './components/icons/WarningIcon';
-import { ProductsHubView } from './components/ProductsHubView';
-import { SuppliersHubView } from './components/SuppliersHubView';
+import { useMockData } from './hooks/useMockData.ts';
+import { ProductIcon } from './components/icons/ProductIcon.tsx';
+import { SupplierIcon } from './components/icons/SupplierIcon.tsx';
+import { SettingsIcon } from './components/icons/SettingsIcon.tsx';
+import { useSettings } from './hooks/useSettings.ts';
+import { SettingsModal } from './components/SettingsModal.tsx';
+import { WarningIcon } from './components/icons/WarningIcon.tsx';
+import { ProductsHubView } from './components/ProductsHubView.tsx';
+import { SuppliersHubView } from './components/SuppliersHubView.tsx';
 
 
 type View = 'products' | 'suppliers';

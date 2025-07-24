@@ -1,5 +1,6 @@
 
 
+
 import { useState } from 'react';
 import { 
     Product, Warehouse, Supplier, Unit, Stock,
@@ -283,9 +284,11 @@ export const useMockData = () => {
 
 
   // FIFO consumption helper
-  const consumeStockByFIFO = (productId: string, warehouseId: string, quantityToConsume: number, currentStock: Stock[]): { updatedStock: Stock[], consumedCost: number } => {
+  const consumeStockByFIFO = (productId: string, warehouseId: string, quantityToConsume: number, currentStock: Stock[]): { updatedStock: Stock[], consumedCost: number, consumedBatches: { batchId: string, receiptDate: string, cost: number, quantityConsumed: number }[] } => {
     let stillToConsume = quantityToConsume;
     let totalCost = 0;
+    const consumedBatches: { batchId: string, receiptDate: string, cost: number, quantityConsumed: number }[] = [];
+
     const productBatches = currentStock
         .filter(s => s.productId === productId && s.warehouseId === warehouseId)
         .sort((a,b) => new Date(a.receiptDate).getTime() - new Date(b.receiptDate).getTime());
@@ -301,12 +304,19 @@ export const useMockData = () => {
         totalCost += amountFromThisBatch * batch.cost;
         batch.quantity -= amountFromThisBatch;
         stillToConsume -= amountFromThisBatch;
+
+        consumedBatches.push({
+            batchId: batch.batchId,
+            receiptDate: batch.receiptDate,
+            cost: batch.cost,
+            quantityConsumed: amountFromThisBatch
+        });
     }
 
     const updatedStock = currentStock.filter(s => s.quantity > 0.001);
     const consumedCost = quantityToConsume > 0 ? totalCost / quantityToConsume : 0;
     
-    return { updatedStock, consumedCost };
+    return { updatedStock, consumedCost, consumedBatches };
   }
 
 
@@ -413,6 +423,17 @@ export const useMockData = () => {
     });
   };
 
+  const deleteWriteOff = (noteId: string) => {
+    setWriteOffs(prev => {
+        const note = prev.find(n => n.id === noteId);
+        if (note && note.status === DocumentStatus.CONFIRMED) {
+            alert("Tasdiqlangan hujjatni o'chirib bo'lmaydi.");
+            return prev;
+        }
+        return prev.filter(n => n.id !== noteId);
+    });
+  };
+
   const confirmWriteOff = (noteId: string) => {
     const note = writeOffs.find(n => n.id === noteId);
     if (!note || note.status === DocumentStatus.CONFIRMED) return;
@@ -421,9 +442,9 @@ export const useMockData = () => {
     const updatedItems: WriteOffItem[] = [];
 
     note.items.forEach(item => {
-      const { updatedStock, consumedCost } = consumeStockByFIFO(item.productId, note.warehouse_id, item.quantity, tempStock);
+      const { updatedStock, consumedCost, consumedBatches } = consumeStockByFIFO(item.productId, note.warehouse_id, item.quantity, tempStock);
       tempStock = updatedStock;
-      updatedItems.push({ ...item, cost: consumedCost });
+      updatedItems.push({ ...item, cost: consumedCost, consumedBatches });
     });
 
     setStock(tempStock);
@@ -600,9 +621,9 @@ export const useMockData = () => {
     const updatedItems: GoodsReturnItem[] = [];
 
     note.items.forEach(item => {
-        const { updatedStock, consumedCost } = consumeStockByFIFO(item.productId, note.warehouse_id, item.quantity, tempStock);
+        const { updatedStock, consumedCost, consumedBatches } = consumeStockByFIFO(item.productId, note.warehouse_id, item.quantity, tempStock);
         tempStock = updatedStock;
-        updatedItems.push({ ...item, cost: consumedCost });
+        updatedItems.push({ ...item, cost: consumedCost, consumedBatches });
     });
     
     setStock(tempStock);
@@ -695,7 +716,7 @@ export const useMockData = () => {
     suppliers, addSupplier, updateSupplier, deleteSupplier, isInnUnique,
     stock, getTotalStockQuantity, getTotalStockAcrossWarehouses, getStockAsOf,
     goodsReceipts, addGoodsReceipt, updateGoodsReceipt, deleteGoodsReceipt, confirmGoodsReceipt, addAndConfirmGoodsReceipt, getNoteTotal,
-    writeOffs, addWriteOff, updateWriteOff, confirmWriteOff,
+    writeOffs, addWriteOff, updateWriteOff, deleteWriteOff, confirmWriteOff,
     internalTransfers, addInternalTransfer, updateInternalTransfer, confirmInternalTransfer,
     inventoryNotes, addInventoryNote, updateInventoryNote, confirmInventoryNote,
     goodsReturns, addGoodsReturn, updateGoodsReturn, confirmGoodsReturn,

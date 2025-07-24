@@ -1,17 +1,19 @@
 
 import React, { useState, useMemo } from 'react';
-import { useMockData } from './hooks/useMockData.ts';
-import { ProductIcon } from './components/icons/ProductIcon.tsx';
-import { SupplierIcon } from './components/icons/SupplierIcon.tsx';
-import { SettingsIcon } from './components/icons/SettingsIcon.tsx';
-import { useSettings } from './hooks/useSettings.ts';
-import { SettingsModal } from './components/SettingsModal.tsx';
-import { WarningIcon } from './components/icons/WarningIcon.tsx';
-import { ProductsHubView } from './components/ProductsHubView.tsx';
-import { SuppliersHubView } from './components/SuppliersHubView.tsx';
+import { useMockData } from './hooks/useMockData';
+import { ProductIcon } from './components/icons/ProductIcon';
+import { SupplierIcon } from './components/icons/SupplierIcon';
+import { SettingsIcon } from './components/icons/SettingsIcon';
+import { useSettings } from './hooks/useSettings';
+import { SettingsModal } from './components/SettingsModal';
+import { WarningIcon } from './components/icons/WarningIcon';
+import { ProductsHubView } from './components/ProductsHubView';
+import { SuppliersHubView } from './components/SuppliersHubView';
+import { WarehousesHubView } from './components/WarehousesHubView';
+import { WarehouseIcon } from './components/icons/WarehouseIcon';
 
 
-type View = 'products' | 'suppliers';
+type View = 'products' | 'suppliers' | 'warehouses';
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>('products');
@@ -24,6 +26,7 @@ const App: React.FC = () => {
   const navigationItems = useMemo(() => [
     { id: 'products', label: 'Mahsulotlar', icon: <ProductIcon className="h-5 w-5" /> },
     { id: 'suppliers', label: "Ta'minotchilar", icon: <SupplierIcon className="h-5 w-5" /> },
+    { id: 'warehouses', label: 'Omborlar', icon: <WarehouseIcon className="h-5 w-5" /> },
   ], []);
   
   const handleNavigation = (view: 'documents' | View, payload?: any) => {
@@ -63,6 +66,11 @@ const App: React.FC = () => {
                   clearPayload={() => setViewToOpen(null)}
                   defaultWarehouseId={defaultWarehouseId}
                   appMode={appMode}
+                />;
+      case 'warehouses':
+        return <WarehousesHubView 
+                  dataManager={dataManager} 
+                  defaultWarehouseId={defaultWarehouseId}
                 />;
       default:
         return <ProductsHubView dataManager={dataManager} navigate={handleNavigation} defaultWarehouseId={defaultWarehouseId} appMode={appMode} />;

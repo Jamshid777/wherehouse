@@ -3,15 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { UseMockDataReturnType } from '../hooks/useMockData';
 import { GoodsReceiptsView } from './GoodsReceiptsView';
-import { WriteOffsView } from './WriteOffsView';
-import { InternalTransfersView } from './InternalTransfersView';
-import { InventoryCountsView } from './InventoryCountsView';
 import { PaymentsView } from './PaymentsView';
 import { GoodsReturnsView } from './GoodsReturnsView';
 import { ReceiptIcon } from './icons/ReceiptIcon';
-import { WriteOffIcon } from './icons/WriteOffIcon';
-import { TransferIcon } from './icons/TransferIcon';
-import { InventoryIcon } from './icons/InventoryIcon';
 import { PaymentIcon } from './icons/PaymentIcon';
 import { ReturnIcon } from './icons/ReturnIcon';
 
@@ -23,14 +17,11 @@ interface DocumentsViewProps {
   appMode: 'pro' | 'lite';
 }
 
-type ActiveTab = 'receipts' | 'writeoffs' | 'returns' | 'transfers' | 'inventory' | 'payments';
+type ActiveTab = 'receipts' | 'returns' | 'payments';
 
 const tabs = [
     { id: 'receipts', label: 'Kirim Hujjatlari', icon: ReceiptIcon },
-    { id: 'writeoffs', label: 'Chiqim Hujjatlari', icon: WriteOffIcon },
     { id: 'returns', label: 'Qaytarish (Ta\'minotchi)', icon: ReturnIcon },
-    { id: 'transfers', label: 'Ichki Ko\'chirish', icon: TransferIcon },
-    { id: 'inventory', label: 'Inventarizatsiya', icon: InventoryIcon },
     { id: 'payments', label: 'To\'lovlar', icon: PaymentIcon },
 ];
 
@@ -48,14 +39,8 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ dataManager, newDo
     switch (activeTab) {
       case 'receipts':
         return <GoodsReceiptsView dataManager={dataManager} newDocumentPayload={currentPayload} clearPayload={clearPayload} defaultWarehouseId={defaultWarehouseId} appMode={appMode} />;
-      case 'writeoffs':
-        return <WriteOffsView dataManager={dataManager} defaultWarehouseId={defaultWarehouseId} />;
       case 'returns':
         return <GoodsReturnsView dataManager={dataManager} defaultWarehouseId={defaultWarehouseId} />;
-      case 'transfers':
-        return <InternalTransfersView dataManager={dataManager} defaultWarehouseId={defaultWarehouseId} />;
-      case 'inventory':
-        return <InventoryCountsView dataManager={dataManager} defaultWarehouseId={defaultWarehouseId} />;
       case 'payments':
         return <PaymentsView dataManager={dataManager} />;
       default:

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo } from 'react';
 import { Supplier, DocumentStatus } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
@@ -6,6 +7,7 @@ import { PlusIcon } from './icons/PlusIcon';
 import { EditIcon } from './icons/EditIcon';
 import { TrashIcon } from './icons/TrashIcon';
 import { SupplierFormModal } from './forms/SupplierFormModal';
+import { ConfirmationModal } from './ConfirmationModal';
 
 interface SuppliersViewProps {
   dataManager: UseMockDataReturnType;
@@ -17,6 +19,7 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({ dataManager }) => 
   const { suppliers, addSupplier, updateSupplier, deleteSupplier, isInnUnique, goodsReceipts, payments, getNoteTotal } = dataManager;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [supplierToDelete, setSupplierToDelete] = useState<string | null>(null);
   
   const supplierBalances = useMemo(() => {
     const balances = new Map<string, number>();
@@ -54,11 +57,16 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({ dataManager }) => 
     handleCloseModal();
   };
   
-  const handleDelete = (id: string) => {
-    if (window.confirm("Haqiqatan ham bu yetkazib beruvchini o'chirmoqchimisiz?")) {
-      deleteSupplier(id);
+  const handleDeleteClick = (id: string) => {
+    setSupplierToDelete(id);
+  };
+
+  const handleConfirmDelete = () => {
+    if (supplierToDelete) {
+      deleteSupplier(supplierToDelete);
+      setSupplierToDelete(null);
     }
-  }
+  };
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-md">
@@ -117,7 +125,7 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({ dataManager }) => 
                         <td className="px-6 py-4 text-center">
                           <div className="flex justify-center items-center gap-2">
                              <button onClick={() => handleOpenModal(supplier)} className="p-2 rounded-full text-amber-600 hover:bg-amber-50 transition-colors"><EditIcon className="h-5 w-5"/></button>
-                            <button onClick={() => handleDelete(supplier.id)} className="p-2 rounded-full text-red-600 hover:bg-red-50 transition-colors"><TrashIcon className="h-5 w-5"/></button>
+                            <button onClick={() => handleDeleteClick(supplier.id)} className="p-2 rounded-full text-red-600 hover:bg-red-50 transition-colors"><TrashIcon className="h-5 w-5"/></button>
                           </div>
                         </td>
                     </tr>
@@ -140,6 +148,14 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({ dataManager }) => 
         onSubmit={handleSubmit}
         supplier={editingSupplier}
         isInnUnique={isInnUnique}
+      />
+      <ConfirmationModal
+        isOpen={!!supplierToDelete}
+        onClose={() => setSupplierToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Yetkazib beruvchini o'chirish"
+        message="Haqiqatan ham bu yetkazib beruvchini o'chirmoqchimisiz?"
+        confirmButtonText="Ha, o'chirish"
       />
     </div>
   );

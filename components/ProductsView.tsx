@@ -1,10 +1,12 @@
 
+
 import React, { useState, useMemo } from 'react';
 import { Product, Unit, DocumentStatus } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
 import { PlusIcon } from './icons/PlusIcon';
 import { SearchIcon } from './icons/SearchIcon';
 import { ProductFormModal } from './forms/ProductFormModal';
+import { ConfirmationModal } from './ConfirmationModal';
 
 interface ProductsViewProps {
   dataManager: UseMockDataReturnType;
@@ -17,6 +19,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ dataManager }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
 
   const filteredProducts = useMemo(() => {
     return products.filter(p =>
@@ -92,11 +95,16 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ dataManager }) => {
     handleCloseModal();
   };
   
-  const handleDelete = (id: string) => {
-    if (window.confirm("Haqiqatan ham bu mahsulotni o'chirmoqchimisiz?")) {
-        deleteProduct(id);
-    }
+  const handleDeleteClick = (id: string) => {
+    setProductToDelete(id);
   }
+
+  const handleConfirmDelete = () => {
+    if (productToDelete) {
+      deleteProduct(productToDelete);
+      setProductToDelete(null);
+    }
+  };
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-md">
@@ -152,7 +160,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ dataManager }) => {
                     <button onClick={(e) => { e.stopPropagation(); handleOpenModal(product); }} title="Tahrirlash" className="transition-transform hover:scale-125">
                         <span role="img" aria-label="Tahrirlash">✏️</span>
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); handleDelete(product.id); }} title="O'chirish" className="transition-transform hover:scale-125">
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(product.id); }} title="O'chirish" className="transition-transform hover:scale-125">
                         <span role="img" aria-label="O'chirish">❌</span>
                     </button>
                   </div>
@@ -175,6 +183,14 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ dataManager }) => {
         onClose={handleCloseModal}
         onSubmit={handleSubmit}
         product={editingProduct}
+      />
+      <ConfirmationModal
+        isOpen={!!productToDelete}
+        onClose={() => setProductToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Mahsulotni o'chirish"
+        message="Haqiqatan ham bu mahsulotni o'chirmoqchimisiz? Bu amalni bekor qilib bo'lmaydi."
+        confirmButtonText="Ha, o'chirish"
       />
     </div>
   );

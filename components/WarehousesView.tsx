@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo } from 'react';
 import { Warehouse } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
@@ -6,6 +7,7 @@ import { Modal } from './Modal';
 import { PlusIcon } from './icons/PlusIcon';
 import { EditIcon } from './icons/EditIcon';
 import { TrashIcon } from './icons/TrashIcon';
+import { ConfirmationModal } from './ConfirmationModal';
 
 interface WarehousesViewProps {
   dataManager: UseMockDataReturnType;
@@ -15,6 +17,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({ dataManager }) =
   const { warehouses, addWarehouse, updateWarehouse, deleteWarehouse } = dataManager;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(null);
+  const [warehouseToDelete, setWarehouseToDelete] = useState<string | null>(null);
 
   const handleOpenModal = (warehouse: Warehouse | null = null) => {
     setEditingWarehouse(warehouse);
@@ -35,11 +38,16 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({ dataManager }) =
     handleCloseModal();
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm("Haqiqatan ham bu omborni o'chirmoqchimisiz? Undagi qoldiqlar bo'lmasligi kerak.")) {
-      deleteWarehouse(id);
+  const handleDeleteClick = (id: string) => {
+    setWarehouseToDelete(id);
+  };
+
+  const handleConfirmDelete = () => {
+    if (warehouseToDelete) {
+      deleteWarehouse(warehouseToDelete);
+      setWarehouseToDelete(null);
     }
-  }
+  };
 
   return (
     <div>
@@ -77,7 +85,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({ dataManager }) =
                 <td className="px-6 py-4 text-center">
                   <div className="flex justify-center items-center gap-2">
                      <button onClick={() => handleOpenModal(warehouse)} className="p-2 rounded-full text-amber-600 hover:bg-amber-50 transition-colors"><EditIcon className="h-5 w-5"/></button>
-                    <button onClick={() => handleDelete(warehouse.id)} className="p-2 rounded-full text-red-600 hover:bg-red-50 transition-colors"><TrashIcon className="h-5 w-5"/></button>
+                    <button onClick={() => handleDeleteClick(warehouse.id)} className="p-2 rounded-full text-red-600 hover:bg-red-50 transition-colors"><TrashIcon className="h-5 w-5"/></button>
                   </div>
                 </td>
               </tr>
@@ -98,6 +106,14 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({ dataManager }) =
         onClose={handleCloseModal}
         onSubmit={handleSubmit}
         warehouse={editingWarehouse}
+      />
+      <ConfirmationModal
+        isOpen={!!warehouseToDelete}
+        onClose={() => setWarehouseToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Omborni o'chirish"
+        message="Haqiqatan ham bu omborni o'chirmoqchimisiz? Undagi qoldiqlar bo'lmasligi kerak."
+        confirmButtonText="Ha, o'chirish"
       />
     </div>
   );

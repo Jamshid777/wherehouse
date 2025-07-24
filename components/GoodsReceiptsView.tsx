@@ -2,6 +2,7 @@
 
 
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { GoodsReceiptNote, GoodsReceiptItem, DocumentStatus, PaymentStatus, Product, Supplier, PaymentMethod } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
@@ -50,6 +51,7 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [paymentModalNote, setPaymentModalNote] = useState<GoodsReceiptNote | null>(null);
   const [noteToConfirm, setNoteToConfirm] = useState<string | null>(null);
+  const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
 
 
   const [filters, setFilters] = useState({
@@ -129,11 +131,16 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
     }
   }
   
-  const handleDelete = (id: string) => {
-      if (window.confirm("Haqiqatan ham ushbu qoralama hujjatni o'chirmoqchimisiz?")) {
-          deleteGoodsReceipt(id);
-      }
-  }
+  const handleDeleteClick = (id: string) => {
+    setNoteToDelete(id);
+  };
+
+  const handleConfirmDelete = () => {
+    if (noteToDelete) {
+      deleteGoodsReceipt(noteToDelete);
+      setNoteToDelete(null);
+    }
+  };
 
   const handleExtinguishDebt = (note: GoodsReceiptNote) => {
     setPaymentModalNote(note);
@@ -255,7 +262,7 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
                           {note.status === DocumentStatus.DRAFT ? (
                             <>
                                 <button onClick={(e) => { e.stopPropagation(); handleOpenModal(note); }} title="Tahrirlash" className="p-2 rounded-full text-amber-600 hover:bg-amber-100 transition-colors"><EditIcon className="h-5 w-5"/></button>
-                                <button onClick={(e) => { e.stopPropagation(); handleDelete(note.id); }} title="O'chirish" className="p-2 rounded-full text-red-600 hover:bg-red-100 transition-colors"><TrashIcon className="h-5 w-5"/></button>
+                                <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(note.id); }} title="O'chirish" className="p-2 rounded-full text-red-600 hover:bg-red-100 transition-colors"><TrashIcon className="h-5 w-5"/></button>
                                 <div className="relative group flex items-center">
                                   <button 
                                     onClick={(e) => { e.stopPropagation(); handleConfirmClick(note.id); }} 
@@ -359,6 +366,14 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
         title="Hujjatni tasdiqlash"
         message={<>Hujjatni tasdiqlamoqchimisiz? <br/> Tasdiqlangan hujjatni o'zgartirib bo'lmaydi va zaxiralar yangilanadi.</>}
         confirmButtonText="Ha, tasdiqlash"
+      />
+      <ConfirmationModal
+        isOpen={!!noteToDelete}
+        onClose={() => setNoteToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Hujjatni o'chirish"
+        message="Haqiqatan ham ushbu qoralama hujjatni o'chirmoqchimisiz? Bu amalni bekor qilib bo'lmaydi."
+        confirmButtonText="Ha, o'chirish"
       />
     </div>
   );

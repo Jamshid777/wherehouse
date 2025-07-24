@@ -88,6 +88,12 @@ export interface WriteOffItem {
   productId: string;
   quantity: number;
   cost: number; // captured from FIFO-consumed batches
+  consumedBatches?: {
+      batchId: string;
+      receiptDate: string;
+      cost: number;
+      quantityConsumed: number;
+  }[];
 }
 
 export interface WriteOffNote {
@@ -139,6 +145,12 @@ export interface GoodsReturnItem {
   productId: string;
   quantity: number;
   cost: number; // captured from FIFO-consumed batches at the time of return
+  consumedBatches?: {
+    batchId: string;
+    receiptDate: string;
+    cost: number;
+    quantityConsumed: number;
+  }[];
 }
 
 export interface GoodsReturnNote {

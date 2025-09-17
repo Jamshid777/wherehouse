@@ -428,7 +428,7 @@ const WriteOffFormModal: React.FC<WriteOffFormModalProps> = ({isOpen, onClose, o
     }
     
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={note ? "Chiqim hujjatini tahrirlash" : "Yangi chiqim hujjati"} size="4xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={note ? "Chiqim hujjatini tahrirlash" : "Yangi chiqim hujjati"} size="4xl" closeOnOverlayClick={false}>
             <form onSubmit={handleFormSubmit} className="space-y-6">
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>

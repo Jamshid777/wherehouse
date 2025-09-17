@@ -8,6 +8,7 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   size?: ModalSize;
+  closeOnOverlayClick?: boolean;
 }
 
 const sizeClasses: Record<ModalSize, string> = {
@@ -20,13 +21,26 @@ const sizeClasses: Record<ModalSize, string> = {
     '5xl': 'max-w-6xl',
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
+export const Modal: React.FC<ModalProps> = ({ 
+    isOpen, 
+    onClose, 
+    title, 
+    children, 
+    size = 'md',
+    closeOnOverlayClick = true
+}) => {
   if (!isOpen) return null;
+
+  const handleOverlayClick = () => {
+    if (closeOnOverlayClick) {
+        onClose();
+    }
+  };
 
   return (
     <div 
       className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-start pt-10 md:pt-20 px-4 overflow-y-auto" 
-      onClick={onClose}
+      onClick={handleOverlayClick}
     >
       <div 
         className={`bg-white rounded-xl shadow-2xl w-full m-4 transform transition-all ${sizeClasses[size]}`} 

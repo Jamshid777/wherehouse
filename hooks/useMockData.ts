@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
     Product, Warehouse, Supplier, Unit, Stock,
     GoodsReceiptNote, GoodsReceiptItem, DocumentStatus,
@@ -11,61 +11,127 @@ import {
     Dish, Recipe
 } from '../types';
 
-const initialProducts: Product[] = [
-    { id: 'p1', name: 'Lavash xamiri', sku: 'SKU-001', category: 'Xamir mahsulotlari', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p2', name: 'Burger bulochkasi', sku: 'SKU-002', category: 'Non mahsulotlari', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p3', name: 'Mol go‘shti kotleti', sku: 'SKU-003', category: 'Go‘sht', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p4', name: 'Tovuq filesi', sku: 'SKU-004', category: 'Go‘sht', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p5', name: 'Tovuq shawarma go‘shti', sku: 'SKU-005', category: 'Go‘sht', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p6', name: 'Sosiska (hot-dog uchun)', sku: 'SKU-006', category: 'Go‘sht', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p7', name: 'Pomidor', sku: 'SKU-007', category: 'Sabzavotlar', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p8', name: 'Bodring (tuzlangan)', sku: 'SKU-008', category: 'Sabzavotlar', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p9', name: 'Piyoz (halqa)', sku: 'SKU-009', category: 'Sabzavotlar', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p10', name: 'Salat bargi (Iceberg)', sku: 'SKU-010', category: 'Sabzavotlar', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p11', name: 'Jalapeno (achchiq qalampir)', sku: 'SKU-011', category: 'Sabzavotlar', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p12', name: 'Qo‘ziqorin (konserva)', sku: 'SKU-012', category: 'Sabzavotlar', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p13', name: 'Pishloq (Cheddar)', sku: 'SKU-013', category: 'Sut mahsulotlari', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p14', name: 'Mozzarella pishlog‘i', sku: 'SKU-014', category: 'Sut mahsulotlari', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p15', name: 'Kartoshka fri', sku: 'SKU-015', category: 'Muzlatilgan', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p16', name: 'Ketchup', sku: 'SKU-016', category: 'Souslar', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p17', name: 'Mayonez', sku: 'SKU-017', category: 'Souslar', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p18', name: 'Barbekyu sous', sku: 'SKU-018', category: 'Souslar', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p19', name: 'Chili sous', sku: 'SKU-019', category: 'Souslar', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p20', name: 'Sarimsoq sous', sku: 'SKU-020', category: 'Souslar', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p21', name: 'Ranch sous', sku: 'SKU-021', category: 'Souslar', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p22', name: 'Yengil tortilla', sku: 'SKU-022', category: 'Xamir mahsulotlari', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p23', name: 'Choy paketlari', sku: 'SKU-023', category: 'Ichimliklar', unit: Unit.DONA, min_stock: 10 },
-    { id: 'p24', name: 'Qahva kapsulasi/donasi', sku: 'SKU-024', category: 'Ichimliklar', unit: Unit.DONA, min_stock: 10 },
-];
+// Define the structure for stored data
+interface AppData {
+    products: Product[];
+    warehouses: Warehouse[];
+    suppliers: Supplier[];
+    stock: Stock[];
+    goodsReceipts: GoodsReceiptNote[];
+    writeOffs: WriteOffNote[];
+    internalTransfers: InternalTransferNote[];
+    inventoryNotes: InventoryNote[];
+    payments: Payment[];
+    goodsReturns: GoodsReturnNote[];
+    dishes: Dish[];
+    recipes: Recipe[];
+}
 
-const initialWarehouses: Warehouse[] = [];
+// Define the default data for first-time use
+const getDefaultData = (): AppData => ({
+    products: [
+        { id: 'p1', name: 'Lavash xamiri', sku: 'SKU-001', category: 'Xamir mahsulotlari', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p2', name: 'Burger bulochkasi', sku: 'SKU-002', category: 'Non mahsulotlari', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p3', name: 'Mol go‘shti kotleti', sku: 'SKU-003', category: 'Go‘sht', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p4', name: 'Tovuq filesi', sku: 'SKU-004', category: 'Go‘sht', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p5', name: 'Tovuq shawarma go‘shti', sku: 'SKU-005', category: 'Go‘sht', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p6', name: 'Sosiska (hot-dog uchun)', sku: 'SKU-006', category: 'Go‘sht', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p7', name: 'Pomidor', sku: 'SKU-007', category: 'Sabzavotlar', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p8', name: 'Bodring (tuzlangan)', sku: 'SKU-008', category: 'Sabzavotlar', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p9', name: 'Piyoz (halqa)', sku: 'SKU-009', category: 'Sabzavotlar', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p10', name: 'Salat bargi (Iceberg)', sku: 'SKU-010', category: 'Sabzavotlar', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p11', name: 'Jalapeno (achchiq qalampir)', sku: 'SKU-011', category: 'Sabzavotlar', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p12', name: 'Qo‘ziqorin (konserva)', sku: 'SKU-012', category: 'Sabzavotlar', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p13', name: 'Pishloq (Cheddar)', sku: 'SKU-013', category: 'Sut mahsulotlari', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p14', name: 'Mozzarella pishlog‘i', sku: 'SKU-014', category: 'Sut mahsulotlari', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p15', name: 'Kartoshka fri', sku: 'SKU-015', category: 'Muzlatilgan', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p16', name: 'Ketchup', sku: 'SKU-016', category: 'Souslar', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p17', name: 'Mayonez', sku: 'SKU-017', category: 'Souslar', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p18', name: 'Barbekyu sous', sku: 'SKU-018', category: 'Souslar', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p19', name: 'Chili sous', sku: 'SKU-019', category: 'Souslar', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p20', name: 'Sarimsoq sous', sku: 'SKU-020', category: 'Souslar', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p21', name: 'Ranch sous', sku: 'SKU-021', category: 'Souslar', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p22', name: 'Yengil tortilla', sku: 'SKU-022', category: 'Xamir mahsulotlari', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p23', name: 'Choy paketlari', sku: 'SKU-023', category: 'Ichimliklar', unit: Unit.DONA, min_stock: 10 },
+        { id: 'p24', name: 'Qahva kapsulasi/donasi', sku: 'SKU-024', category: 'Ichimliklar', unit: Unit.DONA, min_stock: 10 },
+    ],
+    warehouses: [],
+    suppliers: [],
+    stock: [],
+    goodsReceipts: [],
+    writeOffs: [],
+    internalTransfers: [],
+    inventoryNotes: [],
+    payments: [],
+    goodsReturns: [],
+    dishes: [],
+    recipes: [],
+});
 
-const initialSuppliers: Supplier[] = [];
+const LOCAL_STORAGE_KEY = 'ombor_nazorati_data_v1';
 
-const initialStock: Stock[] = [];
-
-const initialGoodsReceipts: GoodsReceiptNote[] = [];
-
-const initialDishes: Dish[] = [];
-
-const initialRecipes: Recipe[] = [];
-
+// Create a function to load data from localStorage
+const loadDataFromStorage = (): AppData => {
+    try {
+        const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (storedData) {
+            const parsedData = JSON.parse(storedData);
+            // Merge with default data to handle any new properties/entities added in updates
+            const defaultData = getDefaultData();
+            return {
+                ...defaultData,
+                ...parsedData,
+            };
+        }
+    } catch (error) {
+        console.error("Error loading data from localStorage:", error);
+    }
+    // If nothing in storage or error, return default data
+    return getDefaultData();
+};
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('uz-UZ').format(amount);
 
 export const useMockData = () => {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [warehouses, setWarehouses] = useState<Warehouse[]>(initialWarehouses);
-  const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);
-  const [stock, setStock] = useState<Stock[]>(initialStock);
-  const [goodsReceipts, setGoodsReceipts] = useState<GoodsReceiptNote[]>(initialGoodsReceipts);
-  const [writeOffs, setWriteOffs] = useState<WriteOffNote[]>([]);
-  const [internalTransfers, setInternalTransfers] = useState<InternalTransferNote[]>([]);
-  const [inventoryNotes, setInventoryNotes] = useState<InventoryNote[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [goodsReturns, setGoodsReturns] = useState<GoodsReturnNote[]>([]);
-  const [dishes, setDishes] = useState<Dish[]>(initialDishes);
-  const [recipes, setRecipes] = useState<Recipe[]>(initialRecipes);
+  const [initialData] = useState(loadDataFromStorage);
+
+  const [products, setProducts] = useState<Product[]>(initialData.products);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>(initialData.warehouses);
+  const [suppliers, setSuppliers] = useState<Supplier[]>(initialData.suppliers);
+  const [stock, setStock] = useState<Stock[]>(initialData.stock);
+  const [goodsReceipts, setGoodsReceipts] = useState<GoodsReceiptNote[]>(initialData.goodsReceipts);
+  const [writeOffs, setWriteOffs] = useState<WriteOffNote[]>(initialData.writeOffs);
+  const [internalTransfers, setInternalTransfers] = useState<InternalTransferNote[]>(initialData.internalTransfers);
+  const [inventoryNotes, setInventoryNotes] = useState<InventoryNote[]>(initialData.inventoryNotes);
+  const [payments, setPayments] = useState<Payment[]>(initialData.payments);
+  const [goodsReturns, setGoodsReturns] = useState<GoodsReturnNote[]>(initialData.goodsReturns);
+  const [dishes, setDishes] = useState<Dish[]>(initialData.dishes);
+  const [recipes, setRecipes] = useState<Recipe[]>(initialData.recipes);
+  
+  useEffect(() => {
+    try {
+        const appData: AppData = {
+            products,
+            warehouses,
+            suppliers,
+            stock,
+            goodsReceipts,
+            writeOffs,
+            internalTransfers,
+            inventoryNotes,
+            payments,
+            goodsReturns,
+            dishes,
+            recipes,
+        };
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(appData));
+    } catch (error) {
+        console.error("Error saving data to localStorage:", error);
+    }
+  }, [
+    products, warehouses, suppliers, stock, goodsReceipts, writeOffs, 
+    internalTransfers, inventoryNotes, payments, goodsReturns, dishes, recipes
+  ]);
 
 
   // Helpers

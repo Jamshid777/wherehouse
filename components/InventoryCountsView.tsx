@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { InventoryNote, InventoryItem, DocumentStatus, Stock } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
@@ -253,7 +254,7 @@ const InventoryFormModal: React.FC<InventoryFormModalProps> = ({isOpen, onClose,
     const getProductInfo = (productId: string) => products.find(p => p.id === productId);
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={note ? "Inventarizatsiyani tahrirlash" : "Yangi inventarizatsiya"} size="5xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={note ? "Inventarizatsiyani tahrirlash" : "Yangi inventarizatsiya"} size="5xl" closeOnOverlayClick={false}>
             <form onSubmit={handleFormSubmit} className="space-y-6">
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                     <div>

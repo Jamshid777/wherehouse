@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo } from 'react';
 import { Product, Unit, DocumentStatus } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
@@ -26,7 +25,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ dataManager }) => {
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.category.toLowerCase().includes(searchTerm.toLowerCase())
-    ).sort((a,b) => a.name.localeCompare(b.name));
+    );
   }, [products, searchTerm]);
 
   const supplierPricesByProduct = useMemo(() => {
@@ -147,7 +146,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ dataManager }) => {
           <tbody className="divide-y divide-slate-200">
             {filteredProducts.map((product, index) => (
               <tr key={product.id} className="hover:bg-slate-50">
-                <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{index + 1}</td>
+                <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{filteredProducts.length - index}</td>
                 <td className="px-6 py-4 font-medium text-slate-900 whitespace-nowrap border-r border-slate-200">{product.name}</td>
                 <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{product.unit}</td>
                 <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{product.category}</td>
@@ -183,6 +182,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ dataManager }) => {
         onClose={handleCloseModal}
         onSubmit={handleSubmit}
         product={editingProduct}
+        products={products}
       />
       <ConfirmationModal
         isOpen={!!productToDelete}

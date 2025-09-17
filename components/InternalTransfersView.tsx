@@ -383,7 +383,7 @@ const InternalTransferFormModal: React.FC<InternalTransferFormModalProps> = ({is
     const getProductInfo = (productId: string) => products.find(p => p.id === productId);
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={note ? "Ichki ko'chirishni tahrirlash" : "Yangi ichki ko'chirish"} size="4xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={note ? "Ichki ko'chirishni tahrirlash" : "Yangi ichki ko'chirish"} size="4xl" closeOnOverlayClick={false}>
             <form onSubmit={handleFormSubmit} className="space-y-6">
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>

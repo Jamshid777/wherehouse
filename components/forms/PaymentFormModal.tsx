@@ -69,7 +69,7 @@ export const PaymentFormModal: React.FC<PaymentFormModalProps> = ({isOpen, onClo
     }
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={"Yangi to'lov hujjati"} size="3xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={"Yangi to'lov hujjati"} size="3xl" closeOnOverlayClick={false}>
             <form onSubmit={handleFormSubmit} className="space-y-6">
                 {/* Header */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

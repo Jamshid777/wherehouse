@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../Modal';
 import { Supplier } from '../../types';
@@ -74,7 +72,7 @@ export const SupplierFormModal: React.FC<SupplierFormModalProps> = ({isOpen, onC
     }
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={supplier ? "Yetkazib beruvchini tahrirlash" : "Yangi yetkazib beruvchi"}>
+        <Modal isOpen={isOpen} onClose={onClose} title={supplier ? "Yetkazib beruvchini tahrirlash" : "Yangi yetkazib beruvchi"} closeOnOverlayClick={false}>
             <form onSubmit={handleFormSubmit} className="space-y-4">
                 <div>
                     <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">Tashkilot nomi <span className="text-red-500">*</span></label>

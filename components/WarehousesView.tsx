@@ -162,7 +162,7 @@ const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({isOpen, onClose,
     }
     
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={warehouse ? "Omborni tahrirlash" : "Yangi ombor qo'shish"}>
+        <Modal isOpen={isOpen} onClose={onClose} title={warehouse ? "Omborni tahrirlash" : "Yangi ombor qo'shish"} closeOnOverlayClick={false}>
             <form onSubmit={handleFormSubmit} className="space-y-4">
                  <div>
                     <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">Ombor nomi</label>

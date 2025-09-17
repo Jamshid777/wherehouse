@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { GoodsReceiptNote, GoodsReceiptItem, DocumentStatus, PaymentStatus, Product, Supplier, PaymentMethod } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
@@ -652,7 +651,7 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} title={note ? "Kirim hujjatini tahrirlash" : "Yangi kirim hujjati"} size="5xl">
+      <Modal isOpen={isOpen} onClose={onClose} title={note ? "Kirim hujjatini tahrirlash" : "Yangi kirim hujjati"} size="5xl" closeOnOverlayClick={false}>
         <form onSubmit={handleFormSubmit} className="space-y-6">
           {/* Header */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -784,11 +783,12 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
         </form>
       </Modal>
 
-      <ProductFormModal 
+      <ProductFormModal
         isOpen={productModalState.isOpen}
         onClose={() => setProductModalState({isOpen: false, product: null, index: null})}
         onSubmit={handleProductFormSubmit}
         product={productModalState.product}
+        products={products}
       />
       <SupplierFormModal
         isOpen={supplierModalState.isOpen}

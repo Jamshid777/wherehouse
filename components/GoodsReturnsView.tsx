@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { GoodsReturnNote, GoodsReturnItem, DocumentStatus, Stock, Product, GoodsReceiptNote } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
@@ -444,7 +442,7 @@ const GoodsReturnFormModal: React.FC<GoodsReturnFormModalProps> = ({isOpen, onCl
 
     return (
     <>
-        <Modal isOpen={isOpen} onClose={onClose} title={note ? "Qaytarish hujjatini tahrirlash" : "Ta'minotchiga yangi qaytarish hujjati"} size="4xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={note ? "Qaytarish hujjatini tahrirlash" : "Ta'minotchiga yangi qaytarish hujjati"} size="4xl" closeOnOverlayClick={false}>
             <form onSubmit={handleFormSubmit} className="space-y-6">
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>

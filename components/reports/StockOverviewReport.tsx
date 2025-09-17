@@ -363,8 +363,7 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
                                      <tr>
                                          <th className="px-4 py-3 text-left font-medium border-r border-slate-200">Mahsulot</th>
                                          <th className="px-4 py-3 text-right font-medium border-r border-slate-200">Min. Zaxira</th>
-                                         <th className="px-4 py-3 text-right font-medium border-r border-slate-200">Haqiqiy Qoldiq</th>
-                                         <th className="px-4 py-3 text-right font-medium">Farq</th>
+                                         <th className="px-4 py-3 text-right font-medium">Haqiqiy Qoldiq</th>
                                      </tr>
                                  </thead>
                                  <tbody className="divide-y divide-slate-200">
@@ -372,10 +371,7 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
                                          <tr key={item.product.id} className="hover:bg-slate-50">
                                              <td className="px-4 py-3 font-medium text-slate-900 border-r border-slate-200">{item.product.name}</td>
                                              <td className="px-4 py-3 text-right font-mono text-slate-600 border-r border-slate-200">{item.product.min_stock.toFixed(2)} {item.product.unit}</td>
-                                             <td className="px-4 py-3 text-right font-mono text-slate-600 border-r border-slate-200">{item.totalQuantity.toFixed(2)} {item.product.unit}</td>
-                                             <td className="px-4 py-3 text-right font-mono font-bold text-red-600">
-                                                 {item.difference.toFixed(2)}
-                                             </td>
+                                             <td className="px-4 py-3 text-right font-mono font-bold text-red-600">{item.totalQuantity.toFixed(2)} {item.product.unit}</td>
                                          </tr>
                                      ))}
                                  </tbody>

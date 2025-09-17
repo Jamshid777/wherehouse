@@ -1,9 +1,22 @@
-
 import React from 'react';
 
 export const SupplierIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}>
-        <path fillRule="evenodd" d="M8.25 10.875a2.625 2.625 0 115.25 0 2.625 2.625 0 01-5.25 0z" clipRule="evenodd" />
-        <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 6a.75.75 0 00-1.5 0v.816A4.122 4.122 0 008.32 9.423a.75.75 0 000 1.154 4.122 4.122 0 002.93.816v.816a.75.75 0 001.5 0v-.816a4.122 4.122 0 002.93-.816.75.75 0 000-1.154 4.122 4.122 0 00-2.93-.816V6zM15 15.375a3 3 0 01-3 3h-3a3 3 0 01-3-3V15a.75.75 0 01.75-.75H12a.75.75 0 01.75.75v.375a.75.75 0 001.5 0v-.375a2.25 2.25 0 00-2.25-2.25h-1.5a2.25 2.25 0 00-2.25 2.25v.375c0 1.242 1.008 2.25 2.25 2.25h1.5a2.25 2.25 0 002.25-2.25V15a.75.75 0 01.75-.75h.75a.75.75 0 01.75.75v.375z" clipRule="evenodd" />
-    </svg>
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width="24" 
+    height="24" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    {...props}
+  >
+    <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" />
+    <path d="M15 18H9" />
+    <path d="M19 18h2a1 1 0 0 0 1-1v-3.34a1 1 0 0 0-.17-.53l-1.58-3.95A1 1 0 0 0 19.33 8H14Z" />
+    <circle cx="6.5" cy="18.5" r="2.5" />
+    <circle cx="16.5" cy="18.5" r="2.5" />
+  </svg>
 );

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { UseMockDataReturnType } from '../hooks/useMockData';
 import { SuppliersView } from './SuppliersView';
@@ -7,7 +6,7 @@ import { PaymentsReport } from './reports/PaymentsReport';
 import { AgingReport } from './reports/AgingReport';
 import { DocumentsView } from './DocumentsView';
 import { SupplierIcon } from './icons/SupplierIcon';
-import { BalanceIcon } from './icons/BalanceIcon';
+import { SupplierBalanceIcon } from './icons/SupplierBalanceIcon';
 import { PaymentIcon } from './icons/PaymentIcon';
 import { ClockIcon } from './icons/ClockIcon';
 import { DocumentIcon } from './icons/DocumentIcon';
@@ -25,7 +24,7 @@ type ActiveTab = 'list' | 'documents' | 'balance' | 'payments_report' | 'aging';
 const tabs = [
     { id: 'list', label: "Ta'minotchilar Ro'yxati", icon: SupplierIcon },
     { id: 'documents', label: 'Hujjatlar', icon: DocumentIcon },
-    { id: 'balance', label: 'Balans Hisoboti', icon: BalanceIcon },
+    { id: 'balance', label: 'Balans Hisoboti', icon: SupplierBalanceIcon },
     { id: 'payments_report', label: 'To\'lovlar Hisoboti', icon: PaymentIcon },
     { id: 'aging', label: 'Qarzdorlik Muddati', icon: ClockIcon },
 ];

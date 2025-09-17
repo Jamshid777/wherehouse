@@ -252,7 +252,7 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
 
                                         return (
                                             <React.Fragment key={key}>
-                                                <tr className="hover:bg-slate-50 border-t">
+                                                <tr className={`border-t ${isExpanded ? 'bg-slate-100' : 'hover:bg-slate-50'}`}>
                                                     <td className="px-4 py-3 font-medium text-slate-900 border-r border-slate-200">
                                                         <div 
                                                             className={`flex items-center gap-2 ${appMode === 'pro' ? 'cursor-pointer' : ''}`}
@@ -294,33 +294,39 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
                                                         </button>
                                                     </td>
                                                 </tr>
-                                                {isExpanded && appMode === 'pro' && (
-                                                    <tr className="bg-slate-50/50">
-                                                        <td colSpan={6} className="p-2">
-                                                            <div className="p-2 bg-white rounded-md border">
-                                                                <h4 className="text-xs font-semibold mb-1 px-2 text-slate-600">Partiyalar ({product.name})</h4>
-                                                                <table className="w-full text-xs">
-                                                                    <thead className="text-slate-500">
-                                                                        <tr>
-                                                                            <th className="px-2 py-1 text-left border-r">Partiya №</th>
-                                                                            <th className="px-2 py-1 text-left border-r">Kirim sanasi</th>
-                                                                            <th className="px-2 py-1 text-left border-r">Yaroqlilik mudd.</th>
-                                                                            <th className="px-2 py-1 text-right border-r">Qoldiq</th>
-                                                                            <th className="px-2 py-1 text-right">Tannarx</th>
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody>
-                                                                        {batches.sort((a,b) => new Date(a.receiptDate).getTime() - new Date(b.receiptDate).getTime()).map(batch => (
-                                                                            <tr key={batch.batchId} className="border-t">
-                                                                                <td className="px-2 py-1.5 font-mono border-r">{batch.batchId}</td>
-                                                                                <td className="px-2 py-1.5 border-r">{new Date(batch.receiptDate).toLocaleDateString()}</td>
-                                                                                <td className="px-2 py-1.5 border-r">{batch.validDate ? new Date(batch.validDate).toLocaleDateString() : 'N/A'}</td>
-                                                                                <td className="px-2 py-1.5 text-right font-mono border-r">{batch.quantity.toFixed(2)}</td>
-                                                                                <td className="px-2 py-1.5 text-right font-mono">{formatCurrency(batch.cost)}</td>
-                                                                            </tr>
-                                                                        ))}
-                                                                    </tbody>
-                                                                </table>
+                                                {appMode === 'pro' && (
+                                                    <tr>
+                                                        <td colSpan={6} className="p-0 border-0">
+                                                            <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                                                                <div className="overflow-hidden">
+                                                                    <div className="p-2 bg-slate-100">
+                                                                        <div className="p-2 bg-white rounded-md border">
+                                                                            <h4 className="text-xs font-semibold mb-1 px-2 text-slate-600">Partiyalar ({product.name})</h4>
+                                                                            <table className="w-full text-xs">
+                                                                                <thead className="text-slate-500">
+                                                                                    <tr>
+                                                                                        <th className="px-2 py-1 text-left border-r">Partiya №</th>
+                                                                                        <th className="px-2 py-1 text-left border-r">Kirim sanasi</th>
+                                                                                        <th className="px-2 py-1 text-left border-r">Yaroqlilik mudd.</th>
+                                                                                        <th className="px-2 py-1 text-right border-r">Qoldiq</th>
+                                                                                        <th className="px-2 py-1 text-right">Tannarx</th>
+                                                                                    </tr>
+                                                                                </thead>
+                                                                                <tbody>
+                                                                                    {batches.sort((a,b) => new Date(a.receiptDate).getTime() - new Date(b.receiptDate).getTime()).map(batch => (
+                                                                                        <tr key={batch.batchId} className="border-t">
+                                                                                            <td className="px-2 py-1.5 font-mono border-r">{batch.batchId}</td>
+                                                                                            <td className="px-2 py-1.5 border-r">{new Date(batch.receiptDate).toLocaleDateString()}</td>
+                                                                                            <td className="px-2 py-1.5 border-r">{batch.validDate ? new Date(batch.validDate).toLocaleDateString() : 'N/A'}</td>
+                                                                                            <td className="px-2 py-1.5 text-right font-mono border-r">{batch.quantity.toFixed(2)}</td>
+                                                                                            <td className="px-2 py-1.5 text-right font-mono">{formatCurrency(batch.cost)}</td>
+                                                                                        </tr>
+                                                                                    ))}
+                                                                                </tbody>
+                                                                            </table>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
                                                             </div>
                                                         </td>
                                                     </tr>

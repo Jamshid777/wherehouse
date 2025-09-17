@@ -1,6 +1,4 @@
 
-
-
 import { useState } from 'react';
 import { 
     Product, Warehouse, Supplier, Unit, Stock,
@@ -13,70 +11,19 @@ import {
     Dish, Recipe
 } from '../types';
 
-const initialProducts: Product[] = [
-  { id: 'p1', name: 'Un (Oliy nav)', sku: 'FLR-001', category: 'Bakaleya', unit: Unit.KG, min_stock: 50 },
-  { id: 'p2', name: 'Shakar', sku: 'SGR-001', category: 'Bakaleya', unit: Unit.KG, min_stock: 100 },
-  { id: 'p3', name: 'Tuz', sku: 'SLT-001', category: 'Bakaleya', unit: Unit.KG, min_stock: 20 },
-  { id: 'p4', name: 'Kungaboqar yog\'i', sku: 'OIL-001', category: 'Yog\'lar', unit: Unit.L, min_stock: 30 },
-  { id: 'p5', name: 'Tuxum', sku: 'EGG-001', category: 'Sut mahsulotlari', unit: Unit.DONA, min_stock: 200 },
-  { id: 'p6', name: 'Guruch (Lazer)', sku: 'RICE-001', category: 'Bakaleya', unit: Unit.KG, min_stock: 50 },
-  { id: 'p7', name: 'Go\'sht (Mol)', sku: 'MEAT-001', category: 'Go\'sht', unit: Unit.KG, min_stock: 20 },
-  { id: 'p8', name: 'Sabzi (Sariq)', sku: 'CRRT-001', category: 'Sabzavotlar', unit: Unit.KG, min_stock: 30 },
-  { id: 'p9', name: 'Piyoz', sku: 'ONN-001', category: 'Sabzavotlar', unit: Unit.KG, min_stock: 25 },
-];
+const initialProducts: Product[] = [];
 
-const initialWarehouses: Warehouse[] = [
-  { id: 'w1', name: 'Asosiy Ombor', location: 'Toshkent, Shayxontohur tumani', is_active: true },
-  { id: 'w2', name: 'Filial Ombori', location: 'Toshkent, Yunusobod tumani', is_active: true },
-  { id: 'w3', name: 'Yordamchi Ombor', location: 'Toshkent viloyati, Zangiota', is_active: false },
-];
+const initialWarehouses: Warehouse[] = [];
 
-const initialSuppliers: Supplier[] = [
-  { id: 's1', name: '"Agro-Eksport" MChJ', inn: '301234567', phone: '+998901234567', address: 'Farg\'ona viloyati', initial_balance: 500000, credit_limit: 3000000 },
-  { id: 's2', name: '"Universal Trade" XK', inn: '302345678', phone: '+998912345678', address: 'Toshkent shahri', initial_balance: -200000, credit_limit: 0 },
-];
+const initialSuppliers: Supplier[] = [];
 
-const initialStock: Stock[] = [
-    { batchId: 'grn1-i0', productId: 'p1', warehouseId: 'w1', quantity: 120, cost: 5000, receiptDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), validDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString() },
-    { batchId: 'grn2-i0', productId: 'p2', warehouseId: 'w1', quantity: 80, cost: 11000, receiptDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), validDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString() },
-    { batchId: 'grn2-i1', productId: 'p4', warehouseId: 'w1', quantity: 15, cost: 18000, receiptDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), validDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString() },
-    { batchId: 'grn3-i0', productId: 'p1', warehouseId: 'w2', quantity: 30, cost: 5200, receiptDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), validDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString() },
-    { batchId: 'grn4-i0', productId: 'p6', warehouseId: 'w1', quantity: 10, cost: 25000, receiptDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), validDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString() },
-    { batchId: 'grn4-i1', productId: 'p7', warehouseId: 'w1', quantity: 5, cost: 85000, receiptDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), validDate: new Date(new Date().setDate(new Date().getDate() + 10)).toISOString() },
-    { batchId: 'grn4-i2', productId: 'p8', warehouseId: 'w1', quantity: 8.5, cost: 5000, receiptDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), validDate: new Date(new Date().setDate(new Date().getDate() + 15)).toISOString() },
-    { batchId: 'grn4-i3', productId: 'p9', warehouseId: 'w1', quantity: 12, cost: 4000, receiptDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), validDate: new Date(new Date().setDate(new Date().getDate() + 25)).toISOString() },
-];
+const initialStock: Stock[] = [];
 
-const initialGoodsReceipts: GoodsReceiptNote[] = [
-    { id: 'grn1', doc_number: 'K-0001', supplier_id: 's1', warehouse_id: 'w1', date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p1', quantity: 100, price: 5000, batchId: 'grn1-i0', validDate: new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString() }], paid_amount: 500000 },
-    { id: 'grn2', doc_number: 'K-0002', supplier_id: 's2', warehouse_id: 'w1', date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p2', quantity: 200, price: 11500, batchId: 'grn2-i0', validDate: new Date(new Date().setMonth(new Date().getMonth() + 12)).toISOString() }, {productId: 'p4', quantity: 15, price: 18000, batchId: 'grn2-i1', validDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString()}], paid_amount: 1000000 },
-    { id: 'grn3', doc_number: 'K-0003', supplier_id: 's1', warehouse_id: 'w2', date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [{productId: 'p5', quantity: 1000, price: 1400, batchId: 'grn3-i0', validDate: new Date(new Date().setDate(new Date().getDate() + 20)).toISOString() }], paid_amount: 0 },
-    { id: 'grn4', doc_number: 'K-0004', supplier_id: 's1', warehouse_id: 'w1', date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: DocumentStatus.CONFIRMED, items: [
-        {productId: 'p6', quantity: 10, price: 25000, batchId: 'grn4-i0', validDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString() },
-        {productId: 'p7', quantity: 5, price: 85000, batchId: 'grn4-i1', validDate: new Date(new Date().setDate(new Date().getDate() + 10)).toISOString() },
-        {productId: 'p8', quantity: 8.5, price: 5000, batchId: 'grn4-i2', validDate: new Date(new Date().setDate(new Date().getDate() + 15)).toISOString() },
-        {productId: 'p9', quantity: 12, price: 4000, batchId: 'grn4-i3', validDate: new Date(new Date().setDate(new Date().getDate() + 25)).toISOString() }
-    ], paid_amount: 0 },
-]
+const initialGoodsReceipts: GoodsReceiptNote[] = [];
 
-const initialDishes: Dish[] = [
-  { id: 'd1', name: 'Osh', unit: Unit.PORTSIYA, techCardUrl: 'https://technologicalcardeditor-production.up.railway.app/' },
-  { id: 'd2', name: 'Lag\'mon', unit: Unit.PORTSIYA, techCardUrl: 'https://technologicalcardeditor-production.up.railway.app/' },
-  { id: 'd3', name: 'Somsa (go\'shtli)', unit: Unit.DONA, techCardUrl: 'https://technologicalcardeditor-production.up.railway.app/' },
-  { id: 'd4', name: 'Mastava', unit: Unit.PORTSIYA, techCardUrl: 'https://technologicalcardeditor-production.up.railway.app/' },
-  { id: 'd5', name: 'Sho\'rva', unit: Unit.PORTSIYA, techCardUrl: 'https://technologicalcardeditor-production.up.railway.app/' },
-];
+const initialDishes: Dish[] = [];
 
-const initialRecipes: Recipe[] = [
-    { dishId: 'd1', items: [
-        { productId: 'p6', quantity: 0.1 }, // Guruch
-        { productId: 'p7', quantity: 0.1 }, // Go'sht
-        { productId: 'p8', quantity: 0.1 }, // Sabzi
-        { productId: 'p9', quantity: 0.05 }, // Piyoz
-        { productId: 'p4', quantity: 0.03 }, // Yog'
-    ]},
-    // ... add more recipes later
-];
+const initialRecipes: Recipe[] = [];
 
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('uz-UZ').format(amount);
@@ -157,24 +104,6 @@ export const useMockData = () => {
 
       return supplier.initial_balance + totalReceipts - totalPayments - totalReturns;
   }
-
-    const checkCreditLimit = (note: GoodsReceiptNote) => {
-        const supplier = suppliers.find(s => s.id === note.supplier_id);
-        if (note.status === DocumentStatus.CONFIRMED || !supplier || !supplier.credit_limit || supplier.credit_limit <= 0) {
-            return { exceeds: false, amount: 0 };
-        }
-        
-        const balanceWithoutThisNote = getSupplierBalance(note.supplier_id);
-        const noteTotal = getNoteTotal(note.items);
-        const debtWithoutThisNote = Math.max(0, balanceWithoutThisNote);
-
-        if (debtWithoutThisNote + noteTotal > supplier.credit_limit) {
-            const exceededAmount = (debtWithoutThisNote + noteTotal - supplier.credit_limit);
-            return { exceeds: true, amount: exceededAmount };
-        }
-        
-        return { exceeds: false, amount: 0 };
-    }
 
   const getStockAsOf = (targetDateStr: string): Stock[] => {
         const targetDate = new Date(targetDateStr);
@@ -281,6 +210,20 @@ export const useMockData = () => {
   const updateSupplier = (updatedSupplier: Supplier) => setSuppliers(prev => prev.map(s => s.id === updatedSupplier.id ? updatedSupplier : s));
   const deleteSupplier = (supplierId: string) => setSuppliers(prev => prev.filter(s => s.id !== supplierId));
   const isInnUnique = (inn: string, currentId: string | null = null) => !suppliers.some(s => s.inn === inn && s.id !== currentId);
+  
+  const canDeleteSupplier = (supplierId: string): boolean => {
+    const supplier = suppliers.find(s => s.id === supplierId);
+    if (!supplier) {
+        return true; 
+    }
+
+    const hasInitialBalance = Math.abs(supplier.initial_balance) > 0.01;
+    const hasReceipts = goodsReceipts.some(gr => gr.supplier_id === supplierId);
+    const hasPayments = payments.some(p => p.supplier_id === supplierId);
+    const hasReturns = goodsReturns.some(gr => gr.supplier_id === supplierId);
+    
+    return !(hasInitialBalance || hasReceipts || hasPayments || hasReturns);
+  };
 
 
   // FIFO consumption helper
@@ -358,11 +301,6 @@ export const useMockData = () => {
         console.error("Hujjat topilmadi yoki allaqachon tasdiqlangan.");
         return;
     };
-
-    const creditCheck = checkCreditLimit(note);
-    if (creditCheck.exceeds) {
-      throw new Error(`Kredit limiti oshib ketdi! (${creditCheck.amount.toLocaleString('uz-UZ')} so'm). Hujjatni tasdiqlash mumkin emas.`);
-    }
 
     // Create payment if there's a prepayment
     if (note.paid_amount > 0) {
@@ -713,7 +651,7 @@ export const useMockData = () => {
   return {
     products, addProduct, updateProduct, deleteProduct,
     warehouses, addWarehouse, updateWarehouse, deleteWarehouse,
-    suppliers, addSupplier, updateSupplier, deleteSupplier, isInnUnique,
+    suppliers, addSupplier, updateSupplier, deleteSupplier, isInnUnique, canDeleteSupplier,
     stock, getTotalStockQuantity, getTotalStockAcrossWarehouses, getStockAsOf,
     goodsReceipts, addGoodsReceipt, updateGoodsReceipt, deleteGoodsReceipt, confirmGoodsReceipt, addAndConfirmGoodsReceipt, getNoteTotal,
     writeOffs, addWriteOff, updateWriteOff, deleteWriteOff, confirmWriteOff,
@@ -725,7 +663,6 @@ export const useMockData = () => {
     recipes,
     calculateProducibleQuantity,
     getSupplierBalance,
-    checkCreditLimit,
   };
 };
 

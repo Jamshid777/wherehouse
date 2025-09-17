@@ -216,9 +216,9 @@ export const AgingReport: React.FC<AgingReportProps> = ({ dataManager }) => {
                                     <th className="px-4 py-3 text-right font-bold">Jami qarz</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-200">
+                            <tbody>
                                 {reportData.map(d => (
-                                    <tr key={d.supplierId} className="hover:bg-slate-50">
+                                    <tr key={d.supplierId} className="hover:bg-slate-50 border-b border-slate-200">
                                         <td className="px-4 py-3 font-medium text-slate-900 border-r border-slate-200">{d.supplierName}</td>
                                         <td className="px-4 py-3 text-right font-mono text-slate-600 border-r border-slate-200">
                                             <button 
@@ -288,7 +288,7 @@ export const AgingReport: React.FC<AgingReportProps> = ({ dataManager }) => {
                                             <th className="px-4 py-2 text-right">Summa</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-200">
+                                    <tbody>
                                         {modalData.docs.map(doc => {
                                             const isExpandable = !doc.docId.startsWith('initial_');
                                             const isExpanded = expandedModalDocs.has(doc.docId);
@@ -297,7 +297,7 @@ export const AgingReport: React.FC<AgingReportProps> = ({ dataManager }) => {
                                             return (
                                                 <React.Fragment key={doc.docId}>
                                                     <tr 
-                                                        className={isExpandable ? "cursor-pointer hover:bg-slate-50" : ""}
+                                                        className={`${isExpandable ? "cursor-pointer" : ""} ${isExpanded ? 'bg-slate-100' : 'hover:bg-slate-50'} border-b border-slate-200`}
                                                         onClick={() => toggleModalDocExpand(doc.docId)}
                                                     >
                                                         <td className="px-4 py-2 font-medium border-r border-slate-200">
@@ -309,38 +309,44 @@ export const AgingReport: React.FC<AgingReportProps> = ({ dataManager }) => {
                                                         <td className="px-4 py-2 border-r border-slate-200">{doc.date === 'N/A' ? 'N/A' : new Date(doc.date).toLocaleDateString()}</td>
                                                         <td className="px-4 py-2 font-mono text-right">{formatCurrency(doc.amount)}</td>
                                                     </tr>
-                                                    {isExpanded && noteDetails && (
-                                                        <tr>
-                                                            <td colSpan={3} className="p-2 bg-slate-50">
-                                                                <div className="bg-white p-3 rounded-md border">
-                                                                    <h5 className="font-semibold text-slate-700 text-xs mb-2">Hujjat tarkibi:</h5>
-                                                                    <table className="w-full text-xs">
-                                                                        <thead>
-                                                                            <tr className="border-b">
-                                                                                <th className="p-1 text-left font-medium">Mahsulot</th>
-                                                                                <th className="p-1 text-right font-medium">Miqdor</th>
-                                                                                <th className="p-1 text-right font-medium">Narx</th>
-                                                                                <th className="p-1 text-right font-medium">Summa</th>
-                                                                            </tr>
-                                                                        </thead>
-                                                                        <tbody>
-                                                                            {noteDetails.items.map((item, itemIdx) => {
-                                                                                const product = products.find(p => p.id === item.productId);
-                                                                                return (
-                                                                                    <tr key={itemIdx} className="border-b last:border-b-0">
-                                                                                        <td className="p-1.5">{product?.name || 'Noma\'lum'}</td>
-                                                                                        <td className="p-1.5 text-right font-mono">{item.quantity}</td>
-                                                                                        <td className="p-1.5 text-right font-mono">{formatCurrency(item.price)}</td>
-                                                                                        <td className="p-1.5 text-right font-mono">{formatCurrency(item.quantity * item.price)}</td>
-                                                                                    </tr>
-                                                                                )
-                                                                            })}
-                                                                        </tbody>
-                                                                    </table>
+                                                     <tr>
+                                                        <td colSpan={3} className="p-0 border-0">
+                                                            <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                                                                <div className="overflow-hidden">
+                                                                    <div className="p-2 bg-slate-100">
+                                                                        {noteDetails && (
+                                                                            <div className="bg-white p-3 rounded-md border">
+                                                                                <h5 className="font-semibold text-slate-700 text-xs mb-2">Hujjat tarkibi:</h5>
+                                                                                <table className="w-full text-xs">
+                                                                                    <thead>
+                                                                                        <tr className="border-b">
+                                                                                            <th className="p-1 text-left font-medium">Mahsulot</th>
+                                                                                            <th className="p-1 text-right font-medium">Miqdor</th>
+                                                                                            <th className="p-1 text-right font-medium">Narx</th>
+                                                                                            <th className="p-1 text-right font-medium">Summa</th>
+                                                                                        </tr>
+                                                                                    </thead>
+                                                                                    <tbody>
+                                                                                        {noteDetails.items.map((item, itemIdx) => {
+                                                                                            const product = products.find(p => p.id === item.productId);
+                                                                                            return (
+                                                                                                <tr key={itemIdx} className="border-b last:border-b-0">
+                                                                                                    <td className="p-1.5">{product?.name || 'Noma\'lum'}</td>
+                                                                                                    <td className="p-1.5 text-right font-mono">{item.quantity}</td>
+                                                                                                    <td className="p-1.5 text-right font-mono">{formatCurrency(item.price)}</td>
+                                                                                                    <td className="p-1.5 text-right font-mono">{formatCurrency(item.quantity * item.price)}</td>
+                                                                                                </tr>
+                                                                                            )
+                                                                                        })}
+                                                                                    </tbody>
+                                                                                </table>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
-                                                            </td>
-                                                        </tr>
-                                                    )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
                                                 </React.Fragment>
                                             )
                                         })}

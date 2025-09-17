@@ -1,6 +1,5 @@
 
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { UseMockDataReturnType } from '../../hooks/useMockData';
 import { Product, Warehouse, DocumentStatus, GoodsReceiptItem, InternalTransferItem, WriteOffItem, Stock, GoodsReturnItem, GoodsReturnNote, WriteOffNote, InternalTransferNote, GoodsReceiptNote } from '../../types';
@@ -304,7 +303,7 @@ export const TurnoverStatementReport: React.FC<TurnoverStatementReportProps> = (
                                 const isExpanded = expandedRows.has(d.product.id);
                                 return (
                                 <React.Fragment key={d.product.id}>
-                                <tr onClick={() => appMode === 'pro' && handleToggleExpand(d.product.id)} className={`hover:bg-slate-50 border-b border-slate-200 ${appMode === 'pro' ? 'cursor-pointer' : ''}`}>
+                                <tr onClick={() => appMode === 'pro' && handleToggleExpand(d.product.id)} className={`border-b border-slate-200 ${appMode === 'pro' ? 'cursor-pointer' : ''} ${isExpanded ? 'bg-slate-100' : 'hover:bg-slate-50'}`}>
                                     <td className="px-4 py-3 font-medium text-slate-900 border-r border-slate-200">
                                         <div className="flex items-center gap-2">
                                             {appMode === 'pro' && <ChevronDownIcon className={`h-4 w-4 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />}
@@ -320,40 +319,46 @@ export const TurnoverStatementReport: React.FC<TurnoverStatementReportProps> = (
                                     <td className="px-4 py-3 text-right font-bold text-slate-800 border-r border-slate-200">{d.closing_qty.toFixed(2)}</td>
                                     <td className="px-4 py-3 text-right font-mono font-bold text-slate-800">{formatCurrency(d.closing_value)}</td>
                                 </tr>
-                                {isExpanded && appMode === 'pro' && (
-                                    <tr className="bg-slate-50/50">
-                                        <td colSpan={9} className="p-2">
-                                            <div className="p-2 bg-white rounded-md border">
-                                                <h4 className="text-sm font-semibold mb-2 px-2">Harakatlar ({d.product.name})</h4>
-                                                <table className="w-full text-xs border-collapse">
-                                                    <thead className="text-slate-500">
-                                                        <tr>
-                                                            <th className="px-2 py-1 text-left border-r border-slate-200">Sana</th>
-                                                            <th className="px-2 py-1 text-left border-r border-slate-200">Hujjat</th>
-                                                            <th className="px-2 py-1 text-left border-r border-slate-200">Turi</th>
-                                                            <th className="px-2 py-1 text-left border-r border-slate-200">Ombor</th>
-                                                            <th className="px-2 py-1 text-right border-r border-slate-200">Miqdor o'zgarishi</th>
-                                                            <th className="px-2 py-1 text-right">Qiymat o'zgarishi</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {d.details.map((det, i) => (
-                                                            <tr key={i} className="border-t">
-                                                                <td className="px-2 py-1.5 border-r border-slate-200">{new Date(det.date).toLocaleDateString()}</td>
-                                                                <td className="px-2 py-1.5 border-r border-slate-200">{det.docNumber}</td>
-                                                                <td className="px-2 py-1.5 capitalize border-r border-slate-200">
-                                                                    {getDocIcon(det.docType)}
-                                                                </td>
-                                                                <td className="px-2 py-1.5 border-r border-slate-200">{det.warehouseName}</td>
-                                                                <td className={`px-2 py-1.5 text-right font-mono border-r border-slate-200 ${det.qtyChange > 0 ? 'text-green-600' : 'text-red-600'}`}>{det.qtyChange.toFixed(2)}</td>
-                                                                <td className={`px-2 py-1.5 text-right font-mono ${det.valueChange > 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(det.valueChange)}</td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                {appMode === 'pro' && (
+                                  <tr>
+                                    <td colSpan={9} className="p-0 border-0">
+                                      <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                                        <div className="overflow-hidden">
+                                          <div className="p-2 bg-slate-100">
+                                              <div className="p-2 bg-white rounded-md border">
+                                                  <h4 className="text-sm font-semibold mb-2 px-2">Harakatlar ({d.product.name})</h4>
+                                                  <table className="w-full text-xs border-collapse">
+                                                      <thead className="text-slate-500">
+                                                          <tr>
+                                                              <th className="px-2 py-1 text-left border-r border-slate-200">Sana</th>
+                                                              <th className="px-2 py-1 text-left border-r border-slate-200">Hujjat</th>
+                                                              <th className="px-2 py-1 text-left border-r border-slate-200">Turi</th>
+                                                              <th className="px-2 py-1 text-left border-r border-slate-200">Ombor</th>
+                                                              <th className="px-2 py-1 text-right border-r border-slate-200">Miqdor o'zgarishi</th>
+                                                              <th className="px-2 py-1 text-right">Qiymat o'zgarishi</th>
+                                                          </tr>
+                                                      </thead>
+                                                      <tbody>
+                                                          {d.details.map((det, i) => (
+                                                              <tr key={i} className="border-t">
+                                                                  <td className="px-2 py-1.5 border-r border-slate-200">{new Date(det.date).toLocaleDateString()}</td>
+                                                                  <td className="px-2 py-1.5 border-r border-slate-200">{det.docNumber}</td>
+                                                                  <td className="px-2 py-1.5 capitalize border-r border-slate-200">
+                                                                      {getDocIcon(det.docType)}
+                                                                  </td>
+                                                                  <td className="px-2 py-1.5 border-r border-slate-200">{det.warehouseName}</td>
+                                                                  <td className={`px-2 py-1.5 text-right font-mono border-r border-slate-200 ${det.qtyChange > 0 ? 'text-green-600' : 'text-red-600'}`}>{det.qtyChange.toFixed(2)}</td>
+                                                                  <td className={`px-2 py-1.5 text-right font-mono ${det.valueChange > 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(det.valueChange)}</td>
+                                                              </tr>
+                                                          ))}
+                                                      </tbody>
+                                                  </table>
+                                              </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                  </tr>
                                 )}
                                 </React.Fragment>
                                 );

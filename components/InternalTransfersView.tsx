@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { InternalTransferNote, InternalTransferItem, DocumentStatus, Stock } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
@@ -8,6 +9,7 @@ import { TrashIcon } from './icons/TrashIcon';
 import { TransferIcon } from './icons/TransferIcon';
 import { EditIcon } from './icons/EditIcon';
 import { ConfirmationModal } from './ConfirmationModal';
+import { ChevronDownIcon } from './icons/ChevronDownIcon';
 
 interface InternalTransfersViewProps {
   dataManager: UseMockDataReturnType;
@@ -17,15 +19,28 @@ interface InternalTransfersViewProps {
 const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
 export const InternalTransfersView: React.FC<InternalTransfersViewProps> = ({ dataManager, defaultWarehouseId }) => {
-  const { internalTransfers, warehouses, addInternalTransfer, updateInternalTransfer, confirmInternalTransfer } = dataManager;
+  const { internalTransfers, warehouses, products, addInternalTransfer, updateInternalTransfer, confirmInternalTransfer } = dataManager;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<InternalTransferNote | null>(null);
   const [noteToConfirm, setNoteToConfirm] = useState<string | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const [filters, setFilters] = useState({
     dateFrom: formatDate(new Date(new Date().setDate(new Date().getDate() - 30))),
     dateTo: formatDate(new Date()),
   });
+
+  const handleToggleExpand = (id: string) => {
+    setExpandedRows(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(id)) {
+            newSet.delete(id);
+        } else {
+            newSet.add(id);
+        }
+        return newSet;
+    });
+  };
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -89,6 +104,7 @@ export const InternalTransfersView: React.FC<InternalTransfersViewProps> = ({ da
     if (!noteToConfirm) return;
     try {
         confirmInternalTransfer(noteToConfirm);
+        setNoteToConfirm(null);
     } catch(error: any) {
         alert(`Xatolik: ${error.message}`);
     }
@@ -128,6 +144,7 @@ export const InternalTransfersView: React.FC<InternalTransfersViewProps> = ({ da
         <table className="w-full text-sm text-left border-collapse">
           <thead className="text-xs text-slate-500 uppercase bg-slate-50 tracking-wider">
             <tr>
+              <th scope="col" className="px-2 py-3 w-8 border-r border-slate-200"></th>
               <th scope="col" className="px-6 py-3 border-r border-slate-200">Raqam / Sana</th>
               <th scope="col" className="px-6 py-3 border-r border-slate-200">Jo'natuvchi</th>
               <th scope="col" className="px-6 py-3 border-r border-slate-200">Qabul Qiluvchi</th>
@@ -135,32 +152,78 @@ export const InternalTransfersView: React.FC<InternalTransfersViewProps> = ({ da
               <th scope="col" className="px-6 py-3 text-center">Amallar</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
-            {filteredInternalTransfers.map(note => (
-              <tr key={note.id} className="hover:bg-slate-50">
-                <td className="px-6 py-4 whitespace-nowrap border-r border-slate-200">
-                  <div className="font-medium text-slate-900">{note.doc_number}</div>
-                  <div className="text-xs text-slate-500">{new Date(note.date).toLocaleDateString()}</div>
-                </td>
-                <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{warehouses.find(w => w.id === note.from_warehouse_id)?.name || 'Noma\'lum'}</td>
-                <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{warehouses.find(w => w.id === note.to_warehouse_id)?.name || 'Noma\'lum'}</td>
-                <td className="px-6 py-4 border-r border-slate-200">
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${note.status === DocumentStatus.CONFIRMED ? 'bg-amber-100 text-amber-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                    {note.status === DocumentStatus.CONFIRMED ? 'Tasdiqlangan' : 'Qoralama'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-center">
-                  {note.status === DocumentStatus.DRAFT && (
-                    <div className="flex justify-center items-center gap-2">
-                        <button onClick={() => handleOpenModal(note)} title="Tahrirlash" className="p-2 rounded-full text-amber-600 hover:bg-amber-100 transition-colors"><EditIcon className="h-5 w-5"/></button>
-                        <button onClick={() => handleConfirmClick(note.id)} className="px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-md hover:bg-green-600 transition-colors">Tasdiqlash</button>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
+          <tbody>
+            {filteredInternalTransfers.map(note => {
+              const isExpanded = expandedRows.has(note.id);
+              return (
+                <React.Fragment key={note.id}>
+                  <tr onClick={() => handleToggleExpand(note.id)} className={`${isExpanded ? 'bg-slate-100' : 'hover:bg-slate-50'} cursor-pointer border-b border-slate-200`}>
+                    <td className="px-2 py-4 text-center border-r border-slate-200">
+                      <ChevronDownIcon className={`h-5 w-5 text-slate-400 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap border-r border-slate-200">
+                      <div className="font-medium text-slate-900">{note.doc_number}</div>
+                      <div className="text-xs text-slate-500">{new Date(note.date).toLocaleDateString()}</div>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{warehouses.find(w => w.id === note.from_warehouse_id)?.name || 'Noma\'lum'}</td>
+                    <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{warehouses.find(w => w.id === note.to_warehouse_id)?.name || 'Noma\'lum'}</td>
+                    <td className="px-6 py-4 border-r border-slate-200">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${note.status === DocumentStatus.CONFIRMED ? 'bg-amber-100 text-amber-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                        {note.status === DocumentStatus.CONFIRMED ? 'Tasdiqlangan' : 'Qoralama'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex justify-center items-center gap-2" onClick={e => e.stopPropagation()}>
+                        {note.status === DocumentStatus.DRAFT ? (
+                          <>
+                            <button onClick={() => handleOpenModal(note)} title="Tahrirlash" className="p-2 rounded-full text-amber-600 hover:bg-amber-100 transition-colors"><EditIcon className="h-5 w-5"/></button>
+                            <button onClick={() => handleConfirmClick(note.id)} className="px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-md hover:bg-green-600 transition-colors">Tasdiqlash</button>
+                          </>
+                        ) : (
+                          <span className="text-xs text-slate-500">-</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                   <tr>
+                      <td colSpan={6} className="p-0 border-0">
+                        <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                          <div className="overflow-hidden">
+                            <div className="px-8 py-4 bg-slate-100">
+                                <h4 className="text-sm font-semibold text-slate-700 mb-2">Hujjat tarkibi</h4>
+                                {note.items.length > 0 ? (
+                                    <table className="w-full text-xs bg-white rounded border-collapse">
+                                        <thead>
+                                            <tr className="border-b">
+                                                <th className="p-2 text-left font-medium border-r border-slate-200">Mahsulot</th>
+                                                <th className="p-2 text-right font-medium">Miqdor</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        {note.items.map((item, index) => {
+                                            const product = products.find(p => p.id === item.productId);
+                                            return (
+                                                <tr key={index} className="border-b last:border-b-0">
+                                                    <td className="p-2 border-r border-slate-200">{product?.name || 'Noma\'lum'}</td>
+                                                    <td className="p-2 text-right font-mono">{item.quantity} {product?.unit}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    <p className="text-xs text-slate-500">Hujjatda mahsulotlar yo'q.</p>
+                                )}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                  </tr>
+                </React.Fragment>
+              );
+            })}
              {filteredInternalTransfers.length === 0 && (
-                <tr><td colSpan={5} className="text-center py-10 text-slate-500">Hujjatlar topilmadi.</td></tr>
+                <tr><td colSpan={6} className="text-center py-10 text-slate-500">Hujjatlar topilmadi.</td></tr>
             )}
           </tbody>
         </table>

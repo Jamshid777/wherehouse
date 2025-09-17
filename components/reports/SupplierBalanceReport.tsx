@@ -1,6 +1,5 @@
 
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { UseMockDataReturnType } from '../../hooks/useMockData';
 import { DocumentStatus, GoodsReceiptNote, Payment, GoodsReceiptItem, Product, GoodsReturnNote } from '../../types';
@@ -135,102 +134,105 @@ export const SupplierBalanceReport: React.FC<SupplierBalanceReportProps> = ({ da
                                 const isExpanded = expandedRows.has(d.supplierId);
                                 return (
                                 <React.Fragment key={d.supplierId}>
-                                <tr onClick={() => handleToggleExpand(d.supplierId)} className="hover:bg-slate-50 cursor-pointer border-b border-slate-200">
-                                    <td className="px-6 py-4 font-medium text-slate-900 border-r border-slate-200">
+                                <tr onClick={() => handleToggleExpand(d.supplierId)} className={`cursor-pointer border-b border-slate-200 ${isExpanded ? 'bg-amber-100' : 'hover:bg-slate-50'}`}>
+                                    <td className={`px-6 py-4 text-slate-900 border-r border-slate-200 ${isExpanded ? 'font-bold' : 'font-medium'}`}>
                                         <div className="flex items-center gap-2">
                                             <ChevronDownIcon className={`h-4 w-4 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
-                                            {d.supplierName}
+                                            <span className={isExpanded ? 'uppercase' : ''}>{d.supplierName}</span>
                                         </div>
                                     </td>
                                     <td className={`px-6 py-4 text-right font-mono font-bold ${d.balance > 0 ? 'text-red-600' : d.balance < 0 ? 'text-green-600' : 'text-slate-800'}`}>
                                         {formatCurrency(d.balance)}
                                     </td>
                                 </tr>
-                                {isExpanded && (
-                                    <tr className="bg-slate-50/50">
-                                        <td colSpan={2} className="p-2">
-                                             <div className="p-2 bg-white rounded-md border">
-                                                <h4 className="text-sm font-semibold mb-2 px-2">Hujjatlar ({d.supplierName})</h4>
-                                                <table className="w-full text-xs border-collapse">
-                                                    <thead className="text-slate-500">
-                                                        <tr>
-                                                            <th className="px-2 py-1 text-left border-r border-slate-200">Sana</th>
-                                                            <th className="px-2 py-1 text-left border-r border-slate-200">Hujjat</th>
-                                                            <th className="px-2 py-1 text-left border-r border-slate-200">Turi</th>
-                                                            <th className="px-2 py-1 text-right border-r border-slate-200">Qarz (Kirim)</th>
-                                                            <th className="px-2 py-1 text-right">To'lov / Qaytarish</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <tr className="border-t bg-slate-100">
-                                                            <td colSpan={3} className="px-2 py-1.5 font-semibold text-slate-600 border-r border-slate-200">Boshlang'ich qoldiq</td>
-                                                            <td className="px-2 py-1.5 text-right font-mono text-green-700 border-r border-slate-200">{d.initialBalance > 0 ? formatCurrency(d.initialBalance) : '-'}</td>
-                                                            <td className="px-2 py-1.5 text-right font-mono text-red-700">{d.initialBalance < 0 ? formatCurrency(Math.abs(d.initialBalance)) : '-'}</td>
-                                                        </tr>
-                                                        {d.details.map((det, i) => {
-                                                            const isReceipt = det.docType === 'receipt';
-                                                            const isPayment = det.docType === 'payment';
-                                                            const isReturn = det.docType === 'return';
-                                                            const isDocExpanded = (isReceipt || isReturn) && expandedDocs.has(det.id);
+                                <tr>
+                                    <td colSpan={2} className="p-0 border-0">
+                                      <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                                        <div className="overflow-hidden">
+                                             <div className="p-2 bg-amber-50">
+                                                <div className="p-2 bg-white rounded-md border">
+                                                    <h4 className="text-sm font-semibold mb-2 px-2">Hujjatlar ({d.supplierName})</h4>
+                                                    <table className="w-full text-xs border-collapse">
+                                                        <thead className="text-slate-500">
+                                                            <tr>
+                                                                <th className="px-2 py-1 text-left border-r border-slate-200">Sana</th>
+                                                                <th className="px-2 py-1 text-left border-r border-slate-200">Hujjat</th>
+                                                                <th className="px-2 py-1 text-left border-r border-slate-200">Turi</th>
+                                                                <th className="px-2 py-1 text-right border-r border-slate-200">Qarz (Kirim)</th>
+                                                                <th className="px-2 py-1 text-right">To'lov / Qaytarish</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr className="border-t bg-slate-100">
+                                                                <td colSpan={3} className="px-2 py-1.5 font-semibold text-slate-600 border-r border-slate-200">Boshlang'ich qoldiq</td>
+                                                                <td className="px-2 py-1.5 text-right font-mono text-green-700 border-r border-slate-200">{d.initialBalance > 0 ? formatCurrency(d.initialBalance) : '-'}</td>
+                                                                <td className="px-2 py-1.5 text-right font-mono text-red-700">{d.initialBalance < 0 ? formatCurrency(Math.abs(d.initialBalance)) : '-'}</td>
+                                                            </tr>
+                                                            {d.details.map((det, i) => {
+                                                                const isReceipt = det.docType === 'receipt';
+                                                                const isPayment = det.docType === 'payment';
+                                                                const isReturn = det.docType === 'return';
+                                                                const isDocExpanded = (isReceipt || isReturn) && expandedDocs.has(det.id);
 
-                                                            const docAmount = isPayment ? det.amount : isReturn ? det.items.reduce((s,i) => s + i.quantity * i.cost, 0) : 0;
+                                                                const docAmount = isPayment ? det.amount : isReturn ? det.items.reduce((s,i) => s + i.quantity * i.cost, 0) : 0;
 
-                                                            return (
-                                                                <React.Fragment key={i}>
-                                                                    <tr 
-                                                                        className={`border-t ${(isReceipt || isReturn) ? 'cursor-pointer hover:bg-slate-200/50' : ''}`}
-                                                                        onClick={() => (isReceipt || isReturn) && handleToggleDocExpand(det.id)}
-                                                                    >
-                                                                        <td className="px-2 py-1.5 border-r border-slate-200">{new Date(det.date).toLocaleDateString()}</td>
-                                                                        <td className="px-2 py-1.5 border-r border-slate-200">
-                                                                            <div className="flex items-center gap-1">
-                                                                                {(isReceipt || isReturn) && <ChevronDownIcon className={`h-4 w-4 text-slate-400 transition-transform ${isDocExpanded ? '' : '-rotate-90'}`} />}
-                                                                                <span>{det.doc_number}</span>
-                                                                            </div>
-                                                                        </td>
-                                                                        <td className="px-2 py-1.5 border-r border-slate-200">{isReceipt ? "Kirim" : isReturn ? "Qaytarish" : "To'lov"}</td>
-                                                                        <td className="px-2 py-1.5 text-right font-mono text-green-700 border-r border-slate-200">{isReceipt ? formatCurrency(getNoteTotal(det.items)) : '-'}</td>
-                                                                        <td className="px-2 py-1.5 text-right font-mono text-red-700">{docAmount > 0 ? formatCurrency(docAmount) : '-'}</td>
-                                                                    </tr>
-                                                                    {isDocExpanded && (isReceipt || isReturn) && 'items' in det && (
-                                                                        <tr className="border-t">
-                                                                            <td colSpan={5} className="p-2 pt-0 bg-slate-50">
-                                                                                <div className="text-xs bg-white p-2 rounded border">
-                                                                                    <h5 className="font-semibold text-slate-600 mb-1">Mahsulotlar:</h5>
-                                                                                    {det.items.map((item, itemIdx) => (
-                                                                                        <div key={itemIdx} className="flex justify-between items-center py-0.5">
-                                                                                            <span>- {getProduct(item.productId)?.name}</span>
-                                                                                            {isReceipt && 'price' in item && <span className="font-mono">{item.quantity} x {formatCurrency(item.price)} = {formatCurrency(item.quantity * item.price)}</span>}
-                                                                                            {isReturn && 'cost' in item && <span className="font-mono">{item.quantity} x {formatCurrency(item.cost)} = {formatCurrency(item.quantity * item.cost)}</span>}
-                                                                                        </div>
-                                                                                    ))}
+                                                                return (
+                                                                    <React.Fragment key={i}>
+                                                                        <tr 
+                                                                            className={`border-t ${(isReceipt || isReturn) ? 'cursor-pointer hover:bg-slate-200/50' : ''}`}
+                                                                            onClick={() => (isReceipt || isReturn) && handleToggleDocExpand(det.id)}
+                                                                        >
+                                                                            <td className="px-2 py-1.5 border-r border-slate-200">{new Date(det.date).toLocaleDateString()}</td>
+                                                                            <td className="px-2 py-1.5 border-r border-slate-200">
+                                                                                <div className="flex items-center gap-1">
+                                                                                    {(isReceipt || isReturn) && <ChevronDownIcon className={`h-4 w-4 text-slate-400 transition-transform ${isDocExpanded ? '' : '-rotate-90'}`} />}
+                                                                                    <span>{det.doc_number}</span>
                                                                                 </div>
                                                                             </td>
+                                                                            <td className="px-2 py-1.5 border-r border-slate-200">{isReceipt ? "Kirim" : isReturn ? "Qaytarish" : "To'lov"}</td>
+                                                                            <td className="px-2 py-1.5 text-right font-mono text-green-700 border-r border-slate-200">{isReceipt ? formatCurrency(getNoteTotal(det.items)) : '-'}</td>
+                                                                            <td className="px-2 py-1.5 text-right font-mono text-red-700">{docAmount > 0 ? formatCurrency(docAmount) : '-'}</td>
                                                                         </tr>
-                                                                    )}
-                                                                </React.Fragment>
-                                                            )
-                                                        })}
-                                                    </tbody>
-                                                     <tfoot className="border-t-2 border-slate-300">
-                                                        <tr>
-                                                            <td colSpan={3} className="px-2 py-2 font-bold text-slate-700 text-base text-right border-r border-slate-200">
-                                                                Yakuniy qoldiq:
-                                                            </td>
-                                                            <td 
-                                                                colSpan={2} 
-                                                                className={`px-2 py-2 text-right font-mono font-bold text-lg ${d.balance > 0 ? 'text-red-600' : d.balance < 0 ? 'text-green-600' : 'text-slate-800'}`}
-                                                            >
-                                                                {formatCurrency(d.balance)}
-                                                            </td>
-                                                        </tr>
-                                                    </tfoot>
-                                                </table>
+                                                                        {isDocExpanded && (isReceipt || isReturn) && 'items' in det && (
+                                                                            <tr className="border-t">
+                                                                                <td colSpan={5} className="p-2 pt-0 bg-slate-50">
+                                                                                    <div className="text-xs bg-white p-2 rounded border">
+                                                                                        <h5 className="font-semibold text-slate-600 mb-1">Mahsulotlar:</h5>
+                                                                                        {det.items.map((item, itemIdx) => (
+                                                                                            <div key={itemIdx} className="flex justify-between items-center py-0.5">
+                                                                                                <span>- {getProduct(item.productId)?.name}</span>
+                                                                                                {isReceipt && 'price' in item && <span className="font-mono">{item.quantity} x {formatCurrency(item.price)} = {formatCurrency(item.quantity * item.price)}</span>}
+                                                                                                {isReturn && 'cost' in item && <span className="font-mono">{item.quantity} x {formatCurrency(item.cost)} = {formatCurrency(item.quantity * item.cost)}</span>}
+                                                                                            </div>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                </td>
+                                                                            </tr>
+                                                                        )}
+                                                                    </React.Fragment>
+                                                                )
+                                                            })}
+                                                        </tbody>
+                                                         <tfoot className="border-t-2 border-slate-300">
+                                                            <tr className="bg-amber-100">
+                                                                <td colSpan={3} className="px-2 py-2 font-bold text-slate-700 text-base text-right border-r border-slate-200">
+                                                                    Yakuniy qoldiq:
+                                                                </td>
+                                                                <td 
+                                                                    colSpan={2} 
+                                                                    className={`px-2 py-2 text-right font-mono font-bold text-lg ${d.balance > 0 ? 'text-red-600' : d.balance < 0 ? 'text-green-600' : 'text-slate-800'}`}
+                                                                >
+                                                                    {formatCurrency(d.balance)}
+                                                                </td>
+                                                            </tr>
+                                                        </tfoot>
+                                                    </table>
+                                                </div>
                                              </div>
-                                        </td>
-                                    </tr>
-                                )}
-
+                                        </div>
+                                      </div>
+                                    </td>
+                                </tr>
                                 </React.Fragment>
                             )})
                             }

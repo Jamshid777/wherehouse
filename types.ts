@@ -24,11 +24,10 @@ export interface Warehouse {
 export interface Supplier {
   id: string;
   name: string;
-  inn: string;
-  phone: string;
-  address: string;
+  inn?: string;
+  phone?: string;
+  address?: string;
   initial_balance: number;
-  credit_limit?: number;
 }
 
 // ===============================================

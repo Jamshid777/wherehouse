@@ -1,8 +1,5 @@
 
 
-
-
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { GoodsReceiptNote, GoodsReceiptItem, DocumentStatus, PaymentStatus, Product, Supplier, PaymentMethod } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
@@ -44,7 +41,7 @@ const getPaymentStatus = (note: GoodsReceiptNote, total: number): { status: Paym
 
 
 export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManager, newDocumentPayload, clearPayload, defaultWarehouseId, appMode }) => {
-  const { goodsReceipts, suppliers, warehouses, products, addGoodsReceipt, updateGoodsReceipt, deleteGoodsReceipt, confirmGoodsReceipt, getNoteTotal, checkCreditLimit, addDirectPaymentForNote } = dataManager;
+  const { goodsReceipts, suppliers, warehouses, products, addGoodsReceipt, updateGoodsReceipt, deleteGoodsReceipt, confirmGoodsReceipt, getNoteTotal, addDirectPaymentForNote } = dataManager;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<GoodsReceiptNote | null>(null);
   const [productForNewNote, setProductForNewNote] = useState<Product | null>(null);
@@ -211,15 +208,15 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
               <th scope="col" className="px-6 py-3 text-center">Amallar</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
+          <tbody>
             {filteredGoodsReceipts.map(note => {
               const total = getNoteTotal(note.items);
               const paymentStatus = getPaymentStatus(note, total);
               const isExpanded = expandedRows.has(note.id);
-              const creditCheck = note.status === DocumentStatus.DRAFT ? checkCreditLimit(note) : { exceeds: false, amount: 0 };
+              const supplierName = note.supplier_id === 'SYSTEM' ? 'Tizim (Inventarizatsiya)' : suppliers.find(s => s.id === note.supplier_id)?.name || 'Noma\'lum';
               return (
               <React.Fragment key={note.id}>
-                <tr onClick={() => handleToggleExpand(note.id)} className="hover:bg-slate-50 cursor-pointer">
+                <tr onClick={() => handleToggleExpand(note.id)} className={`${isExpanded ? 'bg-green-100' : 'hover:bg-slate-50'} cursor-pointer border-b border-slate-200`}>
                     <td className="px-2 py-4 text-center border-r border-slate-200">
                         <ChevronDownIcon className={`h-5 w-5 text-slate-400 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
                     </td>
@@ -227,7 +224,9 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
                         <div className="font-medium text-slate-900">{note.doc_number}</div>
                         <div className="text-xs text-slate-500">{new Date(note.date).toLocaleDateString()}</div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{note.supplier_id === 'SYSTEM' ? 'Tizim (Inventarizatsiya)' : suppliers.find(s => s.id === note.supplier_id)?.name || 'Noma\'lum'}</td>
+                    <td className="px-6 py-4 text-slate-600 border-r border-slate-200">
+                        <span className={isExpanded ? 'font-bold uppercase' : ''}>{supplierName}</span>
+                    </td>
                     <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{warehouses.find(w => w.id === note.warehouse_id)?.name || 'Noma\'lum'}</td>
                     <td className="px-6 py-4 text-right font-mono text-slate-800 border-r border-slate-200">{formatCurrency(total)}</td>
                     <td className="px-6 py-4 border-r border-slate-200">
@@ -267,18 +266,9 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
                                   <button 
                                     onClick={(e) => { e.stopPropagation(); handleConfirmClick(note.id); }} 
                                     className="px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-md hover:bg-green-600 transition-colors disabled:bg-green-300 disabled:cursor-not-allowed"
-                                    disabled={creditCheck.exceeds}
                                   >
                                     Tasdiqlash
                                   </button>
-                                  {creditCheck.exceeds && (
-                                    <>
-                                      <WarningIcon className="h-5 w-5 text-yellow-500 ml-2"/>
-                                      <div className="absolute bottom-full z-10 mb-2 right-0 w-64 p-2 bg-yellow-100 text-yellow-800 border border-yellow-300 text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                                        Diqqat! Bu hujjatni tasdiqlash yetkazib beruvchining kredit limitidan <b>{formatCurrency(creditCheck.amount)} so'm</b>ga oshib ketishiga olib keladi.
-                                      </div>
-                                    </>
-                                  )}
                                 </div>
                             </>
                           ) : (
@@ -290,49 +280,51 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
                         </div>
                     </td>
                 </tr>
-                {isExpanded && (
-                    <tr className="bg-slate-50">
-                        <td colSpan={8} className="p-0">
-                            <div className="px-8 py-4">
-                                <h4 className="text-sm font-semibold text-slate-700 mb-2">Hujjat tarkibi</h4>
-                                {note.items.length > 0 ? (
-                                    <table className="w-full text-xs bg-white rounded border-collapse">
-                                        <thead>
-                                            <tr className="border-b">
-                                                <th className="p-2 text-left font-medium border-r border-slate-200">Mahsulot</th>
-                                                {appMode === 'pro' && <th className="p-2 text-left font-medium border-r border-slate-200">Partiya №</th>}
-                                                {appMode === 'pro' && <th className="p-2 text-left font-medium border-r border-slate-200">Yaroqlilik muddati</th>}
-                                                <th className="p-2 text-right font-medium border-r border-slate-200">Miqdor</th>
-                                                <th className="p-2 text-right font-medium border-r border-slate-200">Narx</th>
-                                                <th className="p-2 text-right font-medium">Summa</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                        {note.items.map((item, index) => (
-                                            <tr key={index} className="border-b last:border-b-0">
-                                                <td className="p-2 border-r border-slate-200">{products.find(p => p.id === item.productId)?.name || 'Noma\'lum'}</td>
-                                                {appMode === 'pro' && <td className="p-2 font-mono text-xs border-r border-slate-200">{item.batchId}</td>}
-                                                {appMode === 'pro' && <td className="p-2 border-r border-slate-200">{new Date(item.validDate).toLocaleDateString()}</td>}
-                                                <td className="p-2 text-right font-mono border-r border-slate-200">{item.quantity}</td>
-                                                <td className="p-2 text-right font-mono border-r border-slate-200">{formatCurrency(item.price)}</td>
-                                                <td className="p-2 text-right font-mono">{formatCurrency(item.price * item.quantity)}</td>
-                                            </tr>
-                                        ))}
-                                        </tbody>
-                                         <tfoot className="bg-slate-50 font-semibold">
-                                            <tr>
-                                                <td colSpan={appMode === 'pro' ? 5 : 3} className="p-2 text-right border-r border-slate-200">Jami:</td>
-                                                <td className="p-2 text-right font-mono">{formatCurrency(getNoteTotal(note.items))}</td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                ) : (
-                                    <p className="text-xs text-slate-500">Hujjatda mahsulotlar yo'q.</p>
-                                )}
-                            </div>
-                        </td>
-                    </tr>
-                )}
+                <tr>
+                  <td colSpan={8} className="p-0 border-0">
+                    <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                      <div className="overflow-hidden">
+                        <div className="px-8 py-4 bg-green-100">
+                            <h4 className="text-sm font-semibold text-slate-700 mb-2">Hujjat tarkibi</h4>
+                            {note.items.length > 0 ? (
+                                <table className="w-full text-xs bg-white rounded border-collapse">
+                                    <thead>
+                                        <tr className="border-b">
+                                            <th className="p-2 text-left font-medium border-r border-slate-200">Mahsulot</th>
+                                            {appMode === 'pro' && <th className="p-2 text-left font-medium border-r border-slate-200">Partiya №</th>}
+                                            {appMode === 'pro' && <th className="p-2 text-left font-medium border-r border-slate-200">Yaroqlilik muddati</th>}
+                                            <th className="p-2 text-right font-medium border-r border-slate-200">Miqdor</th>
+                                            <th className="p-2 text-right font-medium border-r border-slate-200">Narx</th>
+                                            <th className="p-2 text-right font-medium">Summa</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    {note.items.map((item, index) => (
+                                        <tr key={index} className="border-b last:border-b-0">
+                                            <td className="p-2 border-r border-slate-200">{products.find(p => p.id === item.productId)?.name || 'Noma\'lum'}</td>
+                                            {appMode === 'pro' && <td className="p-2 font-mono text-xs border-r border-slate-200">{item.batchId}</td>}
+                                            {appMode === 'pro' && <td className="p-2 border-r border-slate-200">{new Date(item.validDate).toLocaleDateString()}</td>}
+                                            <td className="p-2 text-right font-mono border-r border-slate-200">{item.quantity}</td>
+                                            <td className="p-2 text-right font-mono border-r border-slate-200">{formatCurrency(item.price)}</td>
+                                            <td className="p-2 text-right font-mono">{formatCurrency(item.price * item.quantity)}</td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                     <tfoot className="bg-slate-50 font-semibold">
+                                        <tr>
+                                            <td colSpan={appMode === 'pro' ? 5 : 3} className="p-2 text-right border-r border-slate-200">Jami:</td>
+                                            <td className="p-2 text-right font-mono">{formatCurrency(getNoteTotal(note.items))}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            ) : (
+                                <p className="text-xs text-slate-500">Hujjatda mahsulotlar yo'q.</p>
+                            )}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
               </React.Fragment>
             )})}
              {filteredGoodsReceipts.length === 0 && (

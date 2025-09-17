@@ -1,9 +1,20 @@
 import React from 'react';
 
 export const ReturnIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}>
-        <path d="M15.75 5.25a.75.75 0 01.75.75v10.5a.75.75 0 01-1.5 0V6.75a.75.75 0 01.75-.75z" />
-        <path d="M8.25 5.25a.75.75 0 01.75.75v10.5a.75.75 0 01-1.5 0V6a.75.75 0 01.75-.75zM3 10.5a.75.75 0 01.75-.75h16.5a.75.75 0 010 1.5H3.75a.75.75 0 01-.75-.75z" />
-        <path fillRule="evenodd" d="M12 2.25a.75.75 0 01-.75.75.75.75 0 00-.75.75v11.25a.75.75 0 00.75.75h.75a.75.75 0 00.75-.75V6.44l3.22 3.22a.75.75 0 101.06-1.06l-4.5-4.5a.75.75 0 00-1.06 0l-4.5 4.5a.75.75 0 101.06 1.06l3.22-3.22V3a.75.75 0 01.75-.75z" clipRule="evenodd" />
-    </svg>
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width="24" 
+    height="24" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    {...props}
+  >
+    <path d="M14 15v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3" />
+    <path d="M20 15v-3a2 2 0 0 0-2-2h-4" />
+    <polyline points="16 12 14 10 16 8" />
+  </svg>
 );

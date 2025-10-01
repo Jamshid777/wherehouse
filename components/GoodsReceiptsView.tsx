@@ -1,6 +1,6 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { GoodsReceiptNote, GoodsReceiptItem, DocumentStatus, PaymentStatus, Product, Supplier, PaymentMethod } from '../types';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { GoodsReceiptNote, GoodsReceiptItem, DocumentStatus, PaymentStatus, Product, Supplier, PaymentMethod, Warehouse } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
 import { Modal } from './Modal';
 import { PlusIcon } from './icons/PlusIcon';
@@ -10,8 +10,11 @@ import { ChevronDownIcon } from './icons/ChevronDownIcon';
 import { WarningIcon } from './icons/WarningIcon';
 import { ProductFormModal } from './forms/ProductFormModal';
 import { SupplierFormModal } from './forms/SupplierFormModal';
+import { WarehouseFormModal } from './forms/WarehouseFormModal';
 import { CashIcon } from './icons/CashIcon';
 import { ConfirmationModal } from './ConfirmationModal';
+import { SearchableSelect } from './SearchableSelect';
+import { PriceAdjustmentFormModal } from './forms/PriceAdjustmentFormModal';
 
 
 interface GoodsReceiptsViewProps {
@@ -40,7 +43,7 @@ const getPaymentStatus = (note: GoodsReceiptNote, total: number): { status: Paym
 
 
 export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManager, newDocumentPayload, clearPayload, defaultWarehouseId, appMode }) => {
-  const { goodsReceipts, suppliers, warehouses, products, addGoodsReceipt, updateGoodsReceipt, deleteGoodsReceipt, confirmGoodsReceipt, getNoteTotal, addDirectPaymentForNote } = dataManager;
+  const { goodsReceipts, suppliers, warehouses, products, addGoodsReceipt, updateGoodsReceipt, deleteGoodsReceipt, confirmGoodsReceipt, getNoteTotal, addDirectPaymentForNote, addAndConfirmGoodsReceipt, updateAndConfirmGoodsReceipt, addPriceAdjustmentNote, addAndConfirmPriceAdjustmentNote, priceAdjustments } = dataManager;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<GoodsReceiptNote | null>(null);
   const [productForNewNote, setProductForNewNote] = useState<Product | null>(null);
@@ -48,6 +51,7 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
   const [paymentModalNote, setPaymentModalNote] = useState<GoodsReceiptNote | null>(null);
   const [noteToConfirm, setNoteToConfirm] = useState<string | null>(null);
   const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
+  const [adjustmentModalState, setAdjustmentModalState] = useState<{ note: GoodsReceiptNote, item: GoodsReceiptItem, itemIndex: number } | null>(null);
 
 
   const [filters, setFilters] = useState({
@@ -105,11 +109,20 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
     setProductForNewNote(null);
   };
 
-    const handleSave = (data: { date: string; supplier_id: string; warehouse_id: string; items: GoodsReceiptItem[], paid_amount: number, payment_method: PaymentMethod }) => {
+    const handleSave = (data: { date: string; supplier_id: string; warehouse_id: string; items: GoodsReceiptItem[], paid_amount: number, payment_method: PaymentMethod }, action: 'save' | 'save_and_confirm') => {
         if (editingNote) {
-            updateGoodsReceipt({ ...editingNote, ...data });
+            const updatedNote = { ...editingNote, ...data };
+            if (action === 'save_and_confirm') {
+                updateAndConfirmGoodsReceipt(updatedNote);
+            } else {
+                updateGoodsReceipt(updatedNote);
+            }
         } else {
-            addGoodsReceipt(data);
+            if (action === 'save_and_confirm') {
+                addAndConfirmGoodsReceipt(data);
+            } else {
+                addGoodsReceipt(data);
+            }
         }
         handleCloseModal();
     };
@@ -122,6 +135,7 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
     if (!noteToConfirm) return;
     try {
         confirmGoodsReceipt(noteToConfirm);
+        setNoteToConfirm(null);
     } catch (error: any) {
         alert(`Xatolik: ${error.message}`);
     }
@@ -161,6 +175,10 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
           }
           return newSet;
       });
+  };
+
+  const handleOpenAdjustmentModal = (note: GoodsReceiptNote, item: GoodsReceiptItem, itemIndex: number) => {
+    setAdjustmentModalState({ note, item, itemIndex });
   };
 
   return (
@@ -215,7 +233,7 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
               const supplierName = note.supplier_id === 'SYSTEM' ? 'Tizim (Inventarizatsiya)' : suppliers.find(s => s.id === note.supplier_id)?.name || 'Noma\'lum';
               return (
               <React.Fragment key={note.id}>
-                <tr onClick={() => handleToggleExpand(note.id)} className={`${isExpanded ? 'bg-green-100' : 'hover:bg-slate-50'} cursor-pointer border-b border-slate-200`}>
+                <tr onClick={() => handleToggleExpand(note.id)} className={`${isExpanded ? 'bg-amber-50' : 'hover:bg-slate-50'} cursor-pointer border-b border-slate-200`}>
                     <td className="px-2 py-4 text-center border-r border-slate-200">
                         <ChevronDownIcon className={`h-5 w-5 text-slate-400 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
                     </td>
@@ -224,7 +242,7 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
                         <div className="text-xs text-slate-500">{new Date(note.date).toLocaleDateString()}</div>
                     </td>
                     <td className="px-6 py-4 text-slate-600 border-r border-slate-200">
-                        <span className={isExpanded ? 'font-bold uppercase' : ''}>{supplierName}</span>
+                        <span>{supplierName}</span>
                     </td>
                     <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{warehouses.find(w => w.id === note.warehouse_id)?.name || 'Noma\'lum'}</td>
                     <td className="px-6 py-4 text-right font-mono text-slate-800 border-r border-slate-200">{formatCurrency(total)}</td>
@@ -251,7 +269,7 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
                       </div>
                     </td>
                      <td className="px-6 py-4 border-r border-slate-200">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${note.status === DocumentStatus.CONFIRMED ? 'bg-amber-100 text-amber-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${note.status === DocumentStatus.CONFIRMED ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                         {note.status === DocumentStatus.CONFIRMED ? 'Tasdiqlangan' : 'Qoralama'}
                       </span>
                     </td>
@@ -283,36 +301,61 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
                   <td colSpan={8} className="p-0 border-0">
                     <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
                       <div className="overflow-hidden">
-                        <div className="px-8 py-4 bg-green-100">
+                        <div className="px-8 py-4 bg-amber-50">
                             <h4 className="text-sm font-semibold text-slate-700 mb-2">Hujjat tarkibi</h4>
                             {note.items.length > 0 ? (
                                 <table className="w-full text-xs bg-white rounded border-collapse">
-                                    <thead>
+                                    <thead className="text-slate-500 uppercase">
                                         <tr className="border-b">
                                             <th className="p-2 text-left font-medium border-r border-slate-200">Mahsulot</th>
                                             {appMode === 'pro' && <th className="p-2 text-left font-medium border-r border-slate-200">Partiya №</th>}
                                             {appMode === 'pro' && <th className="p-2 text-left font-medium border-r border-slate-200">Yaroqlilik muddati</th>}
                                             <th className="p-2 text-right font-medium border-r border-slate-200">Miqdor</th>
                                             <th className="p-2 text-right font-medium border-r border-slate-200">Narx</th>
-                                            <th className="p-2 text-right font-medium">Summa</th>
+                                            <th className="p-2 text-right font-medium border-r border-slate-200">Summa</th>
+                                            <th className="p-2 text-center font-medium">Amallar</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                    {note.items.map((item, index) => (
+                                    {note.items.map((item, index) => {
+                                      const adjustment = priceAdjustments.find(pa => pa.status === DocumentStatus.CONFIRMED && pa.goodsReceiptNoteId === note.id && pa.items.some(pi => pi.batchId === item.batchId));
+                                      const adjustedItem = adjustment?.items.find(pi => pi.batchId === item.batchId);
+                                      const displayPrice = adjustedItem ? adjustedItem.newPrice : item.price;
+
+                                      return (
                                         <tr key={index} className="border-b last:border-b-0">
                                             <td className="p-2 border-r border-slate-200">{products.find(p => p.id === item.productId)?.name || 'Noma\'lum'}</td>
                                             {appMode === 'pro' && <td className="p-2 font-mono text-xs border-r border-slate-200">{item.batchId}</td>}
                                             {appMode === 'pro' && <td className="p-2 border-r border-slate-200">{new Date(item.validDate).toLocaleDateString()}</td>}
                                             <td className="p-2 text-right font-mono border-r border-slate-200">{item.quantity}</td>
-                                            <td className="p-2 text-right font-mono border-r border-slate-200">{formatCurrency(item.price)}</td>
-                                            <td className="p-2 text-right font-mono">{formatCurrency(item.price * item.quantity)}</td>
+                                            <td className="p-2 text-right font-mono border-r border-slate-200">
+                                                {formatCurrency(displayPrice)}
+                                                {adjustedItem && <span className="ml-1 text-amber-600" title={`Asl narx: ${formatCurrency(item.price)}\n${adjustment.doc_number} bilan o'zgartirildi.`}>*</span>}
+                                            </td>
+                                            <td className="p-2 text-right font-mono border-r border-slate-200">{formatCurrency(displayPrice * item.quantity)}</td>
+                                            <td className="p-2 text-center">
+                                                {note.status === DocumentStatus.CONFIRMED && note.supplier_id !== 'SYSTEM' && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleOpenAdjustmentModal(note, item, index);
+                                                        }}
+                                                        title="Narxni to'g'irlash"
+                                                        className="p-1.5 rounded-full text-amber-600 hover:bg-amber-100 transition-colors"
+                                                    >
+                                                        <EditIcon className="h-4 w-4" />
+                                                    </button>
+                                                )}
+                                            </td>
                                         </tr>
-                                    ))}
+                                      );
+                                    })}
                                     </tbody>
                                      <tfoot className="bg-slate-50 font-semibold">
                                         <tr>
-                                            <td colSpan={appMode === 'pro' ? 5 : 3} className="p-2 text-right border-r border-slate-200">Jami:</td>
+                                            <td colSpan={appMode === 'pro' ? 6 : 4} className="p-2 text-right border-r border-slate-200">Jami:</td>
                                             <td className="p-2 text-right font-mono">{formatCurrency(getNoteTotal(note.items))}</td>
+                                            <td></td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -365,6 +408,14 @@ export const GoodsReceiptsView: React.FC<GoodsReceiptsViewProps> = ({ dataManage
         title="Hujjatni o'chirish"
         message="Haqiqatan ham ushbu qoralama hujjatni o'chirmoqchimisiz? Bu amalni bekor qilib bo'lmaydi."
         confirmButtonText="Ha, o'chirish"
+      />
+      <PriceAdjustmentFormModal
+        isOpen={!!adjustmentModalState}
+        onClose={() => setAdjustmentModalState(null)}
+        onSaveDraft={addPriceAdjustmentNote}
+        onConfirm={addAndConfirmPriceAdjustmentNote}
+        dataManager={dataManager}
+        adjustmentData={adjustmentModalState}
       />
     </div>
   );
@@ -474,7 +525,7 @@ const DebtPaymentModal: React.FC<DebtPaymentModalProps> = ({ isOpen, note, onClo
 interface GoodsReceiptFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: { date: string; supplier_id: string; warehouse_id: string; items: GoodsReceiptItem[], paid_amount: number, payment_method: PaymentMethod }) => void;
+  onSubmit: (data: { date: string; supplier_id: string; warehouse_id: string; items: GoodsReceiptItem[], paid_amount: number, payment_method: PaymentMethod }, action: 'save' | 'save_and_confirm') => void;
   note: GoodsReceiptNote | null;
   productForNewNote: Product | null;
   dataManager: UseMockDataReturnType;
@@ -493,7 +544,7 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
   defaultWarehouseId,
   appMode,
 }) => {
-  const { products, warehouses, suppliers, addProduct, updateProduct, addSupplier, updateSupplier, isInnUnique } = dataManager;
+  const { products, warehouses, suppliers, addProduct, updateProduct, addSupplier, updateSupplier, isInnUnique, addWarehouse, updateWarehouse, getNextBatchNumber } = dataManager;
   
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -506,46 +557,61 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
   
   const [productModalState, setProductModalState] = useState<{isOpen: boolean, product: Product | null, index: number | null}>({isOpen: false, product: null, index: null});
   const [supplierModalState, setSupplierModalState] = useState<{isOpen: boolean, supplier: Supplier | null}>({isOpen: false, supplier: null});
+  const [warehouseModalState, setWarehouseModalState] = useState<{isOpen: boolean, warehouse: Warehouse | null}>({isOpen: false, warehouse: null});
 
+  const firstProductInputRef = useRef<HTMLInputElement>(null);
+
+  const productOptions = useMemo(() => {
+    return products.map(p => ({
+        value: p.id,
+        label: `${p.name} (${p.unit})`
+    }));
+  }, [products]);
 
   useEffect(() => {
-    if (isOpen) {
-      if (note) {
+    if (!isOpen) {
+        return;
+    }
+
+    if (note) { // Editing mode
         setFormData({
-          date: new Date(note.date).toISOString().split('T')[0],
-          supplier_id: note.supplier_id,
-          warehouse_id: note.warehouse_id,
-          paid_amount: note.paid_amount,
-          payment_method: note.payment_method || PaymentMethod.CASH
+            date: new Date(note.date).toISOString().split('T')[0],
+            supplier_id: note.supplier_id,
+            warehouse_id: note.warehouse_id,
+            paid_amount: note.paid_amount,
+            payment_method: note.payment_method || PaymentMethod.CASH
         });
         setItems(note.items.map(item => ({...item})));
-      } else {
+    } else { // New note mode
+        const startBatchNum = getNextBatchNumber();
         const defaultDate = new Date();
         const validDate = new Date();
         validDate.setMonth(validDate.getMonth() + 6);
 
         const warehouseToSet = defaultWarehouseId || warehouses.find(w => w.is_active)?.id;
         setFormData({
-          date: formatDate(defaultDate),
-          supplier_id: suppliers.length > 0 ? suppliers[0].id : '',
-          warehouse_id: warehouseToSet || '',
-          paid_amount: 0,
-          payment_method: PaymentMethod.CASH
+            date: formatDate(defaultDate),
+            supplier_id: suppliers.length > 0 ? suppliers[0].id : '',
+            warehouse_id: warehouseToSet || '',
+            paid_amount: 0,
+            payment_method: PaymentMethod.CASH
         });
-        const newItem: GoodsReceiptItem = { 
-            productId: '', 
-            quantity: 1, 
-            price: 0, 
-            batchId: `b-${Date.now()}-0`,
+        
+        const newItem: GoodsReceiptItem = {
+            productId: productForNewNote ? productForNewNote.id : '',
+            quantity: 1,
+            price: 0,
+            batchId: startBatchNum.toString(),
             validDate: formatDate(validDate)
         };
-        if (productForNewNote) {
-            newItem.productId = productForNewNote.id;
-        }
         setItems([newItem]);
-      }
+
+        setTimeout(() => {
+            firstProductInputRef.current?.focus();
+        }, 100);
     }
-  }, [note, productForNewNote, isOpen, warehouses, suppliers, defaultWarehouseId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, note, productForNewNote]);
 
   const handleHeaderChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -556,47 +622,60 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
   };
 
   const handleItemChange = (index: number, field: keyof GoodsReceiptItem, value: any) => {
-    const newItems = [...items];
-    const currentItem = newItems[index];
-    
-    if (field === 'productId') {
-        if(value === 'new') {
-            setProductModalState({ isOpen: true, product: null, index });
-            return;
+    setItems(prevItems => {
+        const newItems = [...prevItems];
+        if (!newItems[index]) return prevItems;
+        
+        const currentItem = newItems[index];
+        
+        if (field === 'productId') {
+            (currentItem as any)[field] = value;
+        } else if (field === 'validDate') {
+            (currentItem as any)[field] = value;
+        } else {
+            (currentItem as any)[field] = parseFloat(value) || 0;
         }
-        (currentItem as any)[field] = value;
-    } else if (field === 'validDate') {
-        (currentItem as any)[field] = value;
-    } else {
-        (currentItem as any)[field] = parseFloat(value) || 0;
-    }
-    
-    setItems(newItems);
-  };
-  
-  const handleAddItem = () => {
-    const validDate = new Date();
-    validDate.setMonth(validDate.getMonth() + 6);
-    setItems([...items, { 
-        productId: '', 
-        quantity: 1, 
-        price: 0,
-        batchId: `b-${Date.now()}-${items.length}`,
-        validDate: formatDate(validDate)
-    }]);
+
+        // Auto-add new row logic
+        if (field === 'productId' && value && index === prevItems.length - 1) {
+            const maxBatchInForm = newItems.reduce((max, item) => {
+                const num = parseInt(item.batchId, 10);
+                return !isNaN(num) && num > max ? num : max;
+            }, 0);
+            const validDate = new Date();
+            validDate.setMonth(validDate.getMonth() + 6);
+            newItems.push({
+                productId: '',
+                quantity: 1,
+                price: 0,
+                batchId: (maxBatchInForm + 1).toString(),
+                validDate: formatDate(validDate)
+            });
+        }
+        
+        return newItems;
+    });
   };
 
   const handleRemoveItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
   };
   
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent, action: 'save' | 'save_and_confirm' = 'save') => {
     e.preventDefault();
-    if(items.some(item => !item.productId || item.quantity <= 0 || item.price < 0)) {
-        alert("Iltimos, har bir qatorda mahsulotni tanlang va miqdor, narxni to'g'ri kiriting.");
+
+    if (!formData.supplier_id) {
+        alert("Iltimos, yetkazib beruvchini tanlang.");
         return;
     }
-    const finalItems = items.map(item => {
+
+    if (!formData.warehouse_id) {
+        alert("Iltimos, omborni tanlang.");
+        return;
+    }
+    
+    // Filter out incomplete items. This will ignore the empty row that's auto-added.
+    const finalItems = items.filter(item => item.productId && item.quantity > 0).map(item => {
         if (appMode === 'lite' && !item.validDate) {
             const validDate = new Date();
             validDate.setFullYear(validDate.getFullYear() + 1);
@@ -605,11 +684,24 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
         return item;
     });
 
+    // Check if there are any valid items left.
+    if (finalItems.length === 0) {
+        alert("Iltimos, saqlash uchun kamida bitta to'liq mahsulot qatorini kiriting.");
+        return;
+    }
+
+    // Perform validation on the remaining items.
+    if(finalItems.some(item => item.price < 0)) {
+        alert("Mahsulot narxi manfiy bo'lishi mumkin emas.");
+        return;
+    }
+
     if (appMode === 'pro' && finalItems.some(item => !item.validDate)) {
         alert("Iltimos, har bir mahsulot uchun yaroqlilik muddatini kiriting.");
         return;
     }
-    onSubmit({ ...formData, date: new Date(formData.date).toISOString(), items: finalItems });
+    
+    onSubmit({ ...formData, date: new Date(formData.date).toISOString(), items: finalItems }, action);
   };
   
   const totalAmount = useMemo(() => {
@@ -640,6 +732,16 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
     setSupplierModalState({isOpen: false, supplier: null});
   };
 
+  const handleWarehouseFormSubmit = (warehouseData: Omit<Warehouse, 'id'> | Warehouse) => {
+    if ('id' in warehouseData) {
+        updateWarehouse(warehouseData);
+    } else {
+        const newWarehouse = addWarehouse(warehouseData as Omit<Warehouse, 'id'>);
+        setFormData(prev => ({...prev, warehouse_id: newWarehouse.id}));
+    }
+    setWarehouseModalState({isOpen: false, warehouse: null});
+  };
+
   const handleEditProductClick = (index: number) => {
     const item = items[index];
     if (!item.productId) return;
@@ -651,10 +753,10 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} title={note ? "Kirim hujjatini tahrirlash" : "Yangi kirim hujjati"} size="5xl" closeOnOverlayClick={false}>
-        <form onSubmit={handleFormSubmit} className="space-y-6">
+      <Modal isOpen={isOpen} onClose={onClose} title={note ? "Kirim hujjatini tahrirlash" : "Yangi kirim hujjati"} size="fullscreen" closeOnOverlayClick={false}>
+        <form onSubmit={(e) => handleFormSubmit(e, 'save')} className="flex flex-col h-full">
           {/* Header */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-4 border-b border-slate-200 flex-shrink-0">
             <div>
               <label htmlFor="date" className="block text-sm font-medium text-slate-700 mb-1">Sana</label>
               <input type="date" name="date" id="date" value={formData.date} onChange={handleHeaderChange} required className="w-full px-3 py-2.5 border border-slate-300 rounded-lg" />
@@ -682,103 +784,131 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                     <EditIcon className="h-5 w-5"/>
                 </button>
             </div>
-            <div>
-              <label htmlFor="warehouse_id" className="block text-sm font-medium text-slate-700 mb-1">Ombor</label>
-              <select name="warehouse_id" id="warehouse_id" value={formData.warehouse_id} onChange={handleHeaderChange} required className="w-full px-3 py-2.5 border border-slate-300 rounded-lg">
-                <option value="" disabled>Tanlang...</option>
-                {warehouses.filter(w => w.is_active).map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-              </select>
+            <div className="flex items-end gap-1">
+                <div className="flex-grow">
+                    <label htmlFor="warehouse_id" className="block text-sm font-medium text-slate-700 mb-1">Ombor</label>
+                    <select name="warehouse_id" id="warehouse_id" value={formData.warehouse_id} onChange={handleHeaderChange} required className="w-full px-3 py-2.5 border border-slate-300 rounded-lg">
+                      <option value="" disabled>Tanlang...</option>
+                      {warehouses.filter(w => w.is_active).map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    </select>
+                </div>
+                 <button type="button" onClick={() => setWarehouseModalState({ isOpen: true, warehouse: null })} title="Yangi qo'shish" className="p-2.5 bg-slate-200 rounded-lg hover:bg-slate-300 transition-colors"><PlusIcon className="h-5 w-5"/></button>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    const warehouseToEdit = warehouses.find(w => w.id === formData.warehouse_id);
+                    if (warehouseToEdit) {
+                        setWarehouseModalState({ isOpen: true, warehouse: warehouseToEdit });
+                    }
+                  }} 
+                  disabled={!formData.warehouse_id}
+                  title="Tahrirlash"
+                  className="p-2.5 bg-slate-200 rounded-lg hover:bg-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <EditIcon className="h-5 w-5"/>
+                </button>
             </div>
           </div>
 
           {/* Items Table */}
-          <div className="border-t pt-4">
-            <h4 className="text-lg font-medium text-slate-800 mb-3">Mahsulotlar</h4>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-2 py-2 text-left font-medium text-slate-600" style={{width: appMode === 'pro' ? '35%' : '50%'}}>Mahsulot</th>
-                    <th className="px-2 py-2 text-left font-medium text-slate-600">Miqdor</th>
-                    <th className="px-2 py-2 text-left font-medium text-slate-600">Narx</th>
-                    {appMode === 'pro' && <th className="px-2 py-2 text-left font-medium text-slate-600">Yaroqlilik mudd.</th>}
-                    <th className="px-2 py-2 text-left font-medium text-slate-600">Summa</th>
-                    <th className="px-2 py-2"></th>
+          <div className="flex-1 py-4">
+            <table className="w-full text-sm border-collapse">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-2 py-2 text-left font-medium text-slate-600" style={{width: appMode === 'pro' ? '35%' : '50%'}}>
+                    Mahsulot
+                  </th>
+                  <th className="px-2 py-2 text-left font-medium text-slate-600">Miqdor</th>
+                  <th className="px-2 py-2 text-left font-medium text-slate-600">Narx</th>
+                  {appMode === 'pro' && <th className="px-2 py-2 text-left font-medium text-slate-600">Yaroqlilik mudd.</th>}
+                  <th className="px-2 py-2 text-left font-medium text-slate-600">Summa</th>
+                  <th className="px-2 py-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, index) => (
+                  <tr key={index} className="border-b">
+                    <td className="p-1">
+                      <div className="flex items-center gap-1">
+                          <div className="flex-grow">
+                              <SearchableSelect
+                                  ref={index === 0 ? firstProductInputRef : undefined}
+                                  options={productOptions}
+                                  value={item.productId}
+                                  onChange={(value) => {
+                                      if (value !== null) {
+                                          handleItemChange(index, 'productId', value);
+                                      }
+                                  }}
+                                  onAddNew={() => setProductModalState({ isOpen: true, product: null, index })}
+                                  placeholder="Mahsulotni qidiring..."
+                                  addNewLabel="... Yangi mahsulot qo'shish"
+                              />
+                          </div>
+                          <button 
+                              type="button" 
+                              onClick={() => handleEditProductClick(index)} 
+                              disabled={!item.productId}
+                              title="Tahrirlash"
+                              className="p-2 bg-slate-100 rounded-md hover:bg-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                              <EditIcon className="h-5 w-5"/>
+                          </button>
+                      </div>
+                    </td>
+                    <td className="p-1"><input type="number" value={item.quantity} onChange={e => handleItemChange(index, 'quantity', e.target.value)} min="0.01" step="any" className="w-full px-3 py-2 border border-slate-300 rounded-md" required /></td>
+                    <td className="p-1"><input type="number" value={item.price} onChange={e => handleItemChange(index, 'price', e.target.value)} min="0" step="any" className="w-full px-3 py-2 border border-slate-300 rounded-md" required /></td>
+                    {appMode === 'pro' && <td className="p-1"><input type="date" value={item.validDate} onChange={e => handleItemChange(index, 'validDate', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md" required /></td>}
+                    <td className="p-1 font-mono">{formatCurrency(item.quantity * item.price)}</td>
+                    <td className="p-1 text-center">
+                      <button type="button" onClick={() => handleRemoveItem(index)} className="text-red-500 hover:text-red-700 p-2"><TrashIcon className="h-5 w-5"/></button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {items.map((item, index) => (
-                    <tr key={index} className="border-b">
-                      <td className="p-1">
-                        <div className="flex items-center gap-1">
-                            <select
-                              value={item.productId}
-                              onChange={(e) => handleItemChange(index, 'productId', e.target.value)}
-                              className="w-full px-3 py-2 border border-slate-300 rounded-md flex-grow"
-                            >
-                              <option value="" disabled>Mahsulotni tanlang...</option>
-                              <option value="new" className="font-bold text-amber-600">... Yangi mahsulot qo'shish</option>
-                              {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>)}
-                            </select>
-                            <button 
-                                type="button" 
-                                onClick={() => handleEditProductClick(index)} 
-                                disabled={!item.productId || item.productId === 'new'} 
-                                title="Tahrirlash"
-                                className="p-2 bg-slate-100 rounded-md hover:bg-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                                <EditIcon className="h-5 w-5"/>
-                            </button>
-                        </div>
-                      </td>
-                      <td className="p-1"><input type="number" value={item.quantity} onChange={e => handleItemChange(index, 'quantity', e.target.value)} min="0.01" step="any" className="w-full px-3 py-2 border border-slate-300 rounded-md" required /></td>
-                      <td className="p-1"><input type="number" value={item.price} onChange={e => handleItemChange(index, 'price', e.target.value)} min="0" step="any" className="w-full px-3 py-2 border border-slate-300 rounded-md" required /></td>
-                      {appMode === 'pro' && <td className="p-1"><input type="date" value={item.validDate} onChange={e => handleItemChange(index, 'validDate', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md" required /></td>}
-                      <td className="p-1 font-mono">{formatCurrency(item.quantity * item.price)}</td>
-                      <td className="p-1 text-center">
-                        <button type="button" onClick={() => handleRemoveItem(index)} className="text-red-500 hover:text-red-700 p-2"><TrashIcon className="h-5 w-5"/></button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <button type="button" onClick={handleAddItem} className="mt-4 flex items-center gap-2 text-sm text-amber-600 hover:text-amber-800 font-medium">
-              <PlusIcon className="h-4 w-4"/> Qator qo'shish
-            </button>
+                ))}
+              </tbody>
+            </table>
           </div>
           
           {/* Footer */}
-          <div className="flex justify-between items-center pt-4 border-t flex-wrap gap-4">
-            <div className="flex items-center gap-4 flex-wrap">
-                <div className="flex items-center gap-2">
-                    <label htmlFor="paid_amount" className="text-sm font-medium text-slate-700">Oldindan to'lov:</label>
-                    <input type="number" id="paid_amount" name="paid_amount" value={formData.paid_amount} onChange={handleHeaderChange} min="0" step="any" className="w-40 px-3 py-2 border border-slate-300 rounded-md"/>
-                </div>
-                {formData.paid_amount > 0 && (
-                     <div className="flex items-center gap-2">
-                        <label htmlFor="payment_method" className="text-sm font-medium text-slate-700">To'lov usuli:</label>
-                        <select 
-                            name="payment_method" 
-                            id="payment_method" 
-                            value={formData.payment_method} 
-                            onChange={handleHeaderChange} 
-                            className="w-40 px-3 py-2 border border-slate-300 rounded-md"
-                        >
-                           {Object.values(PaymentMethod).map(m => <option key={m} value={m}>{m}</option>)}
-                        </select>
+          <div className="flex-shrink-0 pt-4 border-t border-slate-200">
+            <div className="flex justify-between items-center flex-wrap gap-4">
+                <div className="flex items-center gap-4 flex-wrap">
+                    <div className="flex items-center gap-2">
+                        <label htmlFor="paid_amount" className="text-sm font-medium text-slate-700">Oldindan to'lov:</label>
+                        <input type="number" id="paid_amount" name="paid_amount" value={formData.paid_amount} onChange={handleHeaderChange} min="0" step="any" className="w-40 px-3 py-2 border border-slate-300 rounded-md"/>
                     </div>
-                )}
+                    {formData.paid_amount > 0 && (
+                         <div className="flex items-center gap-2">
+                            <label htmlFor="payment_method" className="text-sm font-medium text-slate-700">To'lov usuli:</label>
+                            <select 
+                                name="payment_method" 
+                                id="payment_method" 
+                                value={formData.payment_method} 
+                                onChange={handleHeaderChange} 
+                                className="w-40 px-3 py-2 border border-slate-300 rounded-md"
+                            >
+                               {Object.values(PaymentMethod).map(m => <option key={m} value={m}>{m}</option>)}
+                            </select>
+                        </div>
+                    )}
+                </div>
+                
+                <div className="flex items-center gap-6">
+                    <div className="text-right">
+                      <span className="text-sm text-slate-600">Jami summa: </span>
+                      <span className="text-xl font-bold text-slate-800 font-mono">{formatCurrency(totalAmount)}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                         <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">Bekor qilish</button>
+                        <button type="submit" className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700">Saqlash</button>
+                        <button 
+                            type="button" 
+                            onClick={(e) => handleFormSubmit(e, 'save_and_confirm')}
+                            className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700"
+                        >
+                            Saqlash va Tasdiqlash
+                        </button>
+                    </div>
+                </div>
             </div>
-            <div className="text-right">
-              <span className="text-sm text-slate-600">Jami summa: </span>
-              <span className="text-xl font-bold text-slate-800 font-mono">{formatCurrency(totalAmount)}</span>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4">
-            <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">Bekor qilish</button>
-            <button type="submit" className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700">Saqlash</button>
           </div>
         </form>
       </Modal>
@@ -796,6 +926,12 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
         onSubmit={handleSupplierFormSubmit}
         supplier={supplierModalState.supplier}
         isInnUnique={isInnUnique}
+      />
+      <WarehouseFormModal
+        isOpen={warehouseModalState.isOpen}
+        onClose={() => setWarehouseModalState({isOpen: false, warehouse: null})}
+        onSubmit={handleWarehouseFormSubmit}
+        warehouse={warehouseModalState.warehouse}
       />
     </>
   );

@@ -11,12 +11,14 @@ import { ProductsHubView } from './components/ProductsHubView';
 import { SuppliersHubView } from './components/SuppliersHubView';
 import { WarehousesHubView } from './components/WarehousesHubView';
 import { WarehouseIcon } from './components/icons/WarehouseIcon';
+import { SalesIcon } from './components/icons/SalesIcon';
+import { SalesHubView } from './components/SalesHubView';
 
 
-type View = 'products' | 'suppliers' | 'warehouses';
+type View = 'products' | 'suppliers' | 'warehouses' | 'sales';
 
 const App: React.FC = () => {
-  const [activeView, setActiveView] = useState<View>('products');
+  const [activeView, setActiveView] = useState<View>('suppliers');
   const [viewToOpen, setViewToOpen] = useState<{view: View, payload: any} | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
@@ -24,9 +26,10 @@ const App: React.FC = () => {
   const { defaultWarehouseId, setDefaultWarehouseId, appMode, setAppMode } = useSettings();
 
   const navigationItems = useMemo(() => [
-    { id: 'products', label: 'Mahsulotlar', icon: <ProductIcon className="h-5 w-5" /> },
+    { id: 'sales', label: "Sotuv", icon: <SalesIcon className="h-5 w-5" /> },
     { id: 'suppliers', label: "Ta'minotchilar", icon: <SupplierIcon className="h-5 w-5" /> },
-    { id: 'warehouses', label: 'Omborlar', icon: <WarehouseIcon className="h-5 w-5" /> },
+    { id: 'products', label: 'Mahsulotlar', icon: <ProductIcon className="h-5 w-5" /> },
+    { id: 'warehouses', label: 'Filial Omborlari', icon: <WarehouseIcon className="h-5 w-5" /> },
   ], []);
   
   const handleNavigation = (view: 'documents' | View, payload?: any) => {
@@ -72,17 +75,23 @@ const App: React.FC = () => {
                   dataManager={dataManager} 
                   defaultWarehouseId={defaultWarehouseId}
                 />;
+      case 'sales':
+        return <SalesHubView 
+                 dataManager={dataManager}
+                 defaultWarehouseId={defaultWarehouseId}
+                 appMode={appMode}
+               />;
       default:
-        return <ProductsHubView dataManager={dataManager} navigate={handleNavigation} defaultWarehouseId={defaultWarehouseId} appMode={appMode} />;
+        return <SalesHubView dataManager={dataManager} defaultWarehouseId={defaultWarehouseId} appMode={appMode} />;
     }
   };
 
   return (
-    <div className="flex flex-col h-screen bg-slate-100 font-sans text-slate-800">
-      <header className="flex-shrink-0 bg-white border-b border-slate-200 shadow-sm z-10">
+    <div className="flex flex-col h-screen bg-gray-50 font-sans text-gray-800">
+      <header className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm z-10">
         <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
           <div className="flex items-center">
-            <h1 className="text-xl font-bold text-slate-700">
+            <h1 className="text-xl font-bold text-gray-900">
                 Ombor Nazorati 
                 {appMode === 'pro' && <span className="ml-2 text-xs font-semibold text-amber-600 bg-amber-100 px-2 py-1 rounded-full align-middle">PRO</span>}
                 {appMode === 'lite' && <span className="ml-2 text-xs font-semibold text-sky-600 bg-sky-100 px-2 py-1 rounded-full align-middle">LITE</span>}
@@ -92,16 +101,16 @@ const App: React.FC = () => {
             {appMode === 'pro' ? (
                 <>
                     {/* Desktop Navigation */}
-                    <nav className="hidden md:flex items-center h-full space-x-4">
+                    <nav className="hidden md:flex items-center h-full">
                         <div className="flex items-baseline space-x-1">
                             {navigationItems.map(item => (
                             <button
                                 key={item.id}
                                 onClick={() => handleNavigation(item.id as View)}
-                                className={`h-16 flex items-center gap-2 px-4 text-sm font-medium transition-colors border-b-2 ${
+                                className={`h-full flex items-center gap-2 px-4 text-sm transition-colors border-b-2 ${
                                 activeView === item.id
-                                    ? 'border-amber-500 text-amber-600'
-                                    : 'border-transparent text-slate-500 hover:text-amber-600 hover:border-amber-300'
+                                    ? 'bg-amber-50 border-amber-500 text-amber-600 font-semibold'
+                                    : 'border-transparent text-gray-500 hover:bg-gray-100 hover:text-amber-600'
                                 }`}
                             >
                                 {item.icon}
@@ -109,12 +118,12 @@ const App: React.FC = () => {
                             </button>
                             ))}
                         </div>
-                         <div className="h-full flex items-center border-l border-slate-200 pl-4">
+                         <div className="h-full flex items-center border-l border-gray-200 ml-2 pl-2">
                            <button
                                onClick={() => setIsSettingsModalOpen(true)}
                                title="Sozlamalar"
                                aria-label="Sozlamalar"
-                               className="h-10 w-10 flex items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 hover:text-amber-600 transition-colors"
+                               className="h-10 w-10 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-amber-600 transition-colors"
                             >
                                <SettingsIcon className="h-6 w-6" />
                             </button>
@@ -131,14 +140,14 @@ const App: React.FC = () => {
                             aria-label={item.label}
                             className={`h-10 w-10 flex items-center justify-center rounded-lg transition-colors ${
                             activeView === item.id
-                                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white'
-                                : 'text-slate-600 hover:bg-slate-200'
+                                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow'
+                                : 'text-gray-600 hover:bg-gray-100'
                             }`}
                         >
                             {React.cloneElement(item.icon, { className: "h-6 w-6" })}
                         </button>
                         ))}
-                         <button onClick={() => setIsSettingsModalOpen(true)} title="Sozlamalar" aria-label="Sozlamalar" className="h-10 w-10 flex items-center justify-center rounded-lg text-slate-600 hover:bg-slate-200">
+                         <button onClick={() => setIsSettingsModalOpen(true)} title="Sozlamalar" aria-label="Sozlamalar" className="h-10 w-10 flex items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100">
                             <SettingsIcon className="h-6 w-6" />
                         </button>
                     </nav>
@@ -148,7 +157,7 @@ const App: React.FC = () => {
                    onClick={() => setIsSettingsModalOpen(true)}
                    title="Sozlamalar"
                    aria-label="Sozlamalar"
-                   className="h-10 w-10 flex items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 hover:text-amber-600 transition-colors"
+                   className="h-10 w-10 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-amber-600 transition-colors"
                 >
                    <SettingsIcon className="h-6 w-6" />
                 </button>
@@ -157,12 +166,12 @@ const App: React.FC = () => {
       </header>
 
       <main className="flex-1 overflow-y-auto">
-        <div className="p-6 lg:p-8 h-full">
+        <div className="p-4 sm:p-6 lg:p-8 h-full">
             {appMode === 'lite' ? (
                 <div className="flex justify-center items-center h-full">
-                    <div className="max-w-xl text-center p-8 bg-white rounded-xl shadow-md border border-amber-200">
+                    <div className="max-w-xl text-center p-8 bg-white rounded-xl shadow-lg border border-amber-300/50">
                         <WarningIcon className="h-12 w-12 text-amber-500 mx-auto mb-4" />
-                        <p className="text-lg text-slate-700">
+                        <p className="text-lg text-gray-700">
                             Hozirda lite versiya ustida ish olib bormoqdamiz. Hozircha ilovamizning pro versiyasidan foydalanib turishingiz mumkin.
                         </p>
                     </div>

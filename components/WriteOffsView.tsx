@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { WriteOffNote, WriteOffItem, DocumentStatus, WriteOffReason, Stock, Product } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
@@ -186,7 +185,7 @@ export const WriteOffsView: React.FC<WriteOffsViewProps> = ({ dataManager, defau
                     <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{note.reason}</td>
                     <td className="px-6 py-4 text-right font-mono border-r border-slate-200">{note.status === DocumentStatus.CONFIRMED ? formatCurrency(getNoteTotal(note.items)) : '-'}</td>
                     <td className="px-6 py-4 border-r border-slate-200">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${note.status === DocumentStatus.CONFIRMED ? 'bg-amber-100 text-amber-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${note.status === DocumentStatus.CONFIRMED ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                         {note.status === DocumentStatus.CONFIRMED ? 'Tasdiqlangan' : 'Qoralama'}
                     </span>
                     </td>
@@ -210,7 +209,7 @@ export const WriteOffsView: React.FC<WriteOffsViewProps> = ({ dataManager, defau
                             <h4 className="text-sm font-semibold text-slate-700 mb-2">Hujjat tarkibi</h4>
                             {note.items.length > 0 ? (
                                 <table className="w-full text-xs bg-white rounded border-collapse">
-                                    <thead>
+                                    <thead className="text-slate-500 uppercase">
                                         <tr className="border-b">
                                             <th className="p-2 text-left font-medium border-r border-slate-200">Mahsulot</th>
                                             <th className="p-2 text-right font-medium border-r border-slate-200">Miqdor</th>

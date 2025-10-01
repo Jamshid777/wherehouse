@@ -1,14 +1,15 @@
-
 import React, { useState } from 'react';
 import { UseMockDataReturnType } from '../hooks/useMockData';
 import { ProductsView } from './ProductsView';
 import { StockOverviewReport } from './reports/StockOverviewReport';
-import { ProductionReport } from './reports/ProductionReport';
 import { TurnoverStatementReport } from './reports/TurnoverStatementReport';
 import { ProductIcon } from './icons/ProductIcon';
 import { BalanceIcon } from './icons/BalanceIcon';
 import { ProductionIcon } from './icons/ProductionIcon';
 import { TransferIcon } from './icons/TransferIcon';
+import { DishesView } from './DishesView';
+import { ReportIcon } from './icons/ReportIcon';
+import { ProductionNotesView } from './ProductionNotesView';
 
 interface ProductsHubViewProps {
   dataManager: UseMockDataReturnType;
@@ -17,11 +18,12 @@ interface ProductsHubViewProps {
   appMode: 'pro' | 'lite';
 }
 
-type ActiveTab = 'list' | 'stock_overview' | 'production' | 'turnover';
+type ActiveTab = 'list' | 'stock_overview' | 'production' | 'production_documents' | 'turnover';
 
 const tabs = [
     { id: 'stock_overview', label: 'Qoldiqlar', icon: BalanceIcon },
-    { id: 'production', label: 'Taomlar', icon: ProductionIcon },
+    { id: 'production', label: 'Tayyor mahsulotlar va Retseptlar', icon: ProductionIcon },
+    { id: 'production_documents', label: 'Ishlab Chiqarish Hujjatlari', icon: ReportIcon },
     { id: 'turnover', label: 'Aylanma Qaydnoma', icon: TransferIcon },
     { id: 'list', label: 'Mahsulotlar Ro\'yxati', icon: ProductIcon },
 ];
@@ -36,7 +38,9 @@ export const ProductsHubView: React.FC<ProductsHubViewProps> = ({ dataManager, n
       case 'stock_overview':
         return <StockOverviewReport dataManager={dataManager} navigate={navigate} defaultWarehouseId={defaultWarehouseId} appMode={appMode} />;
       case 'production':
-        return <ProductionReport dataManager={dataManager} />;
+        return <DishesView dataManager={dataManager} defaultWarehouseId={defaultWarehouseId} />;
+      case 'production_documents':
+        return <ProductionNotesView dataManager={dataManager} />;
       case 'turnover':
         return <TurnoverStatementReport dataManager={dataManager} defaultWarehouseId={defaultWarehouseId} appMode={appMode} />;
       default:
@@ -46,21 +50,21 @@ export const ProductsHubView: React.FC<ProductsHubViewProps> = ({ dataManager, n
 
   return (
     <div className="space-y-6">
-      <div className="flex border-b border-slate-200 overflow-x-auto">
+      <div className="bg-gray-100 p-1 rounded-lg flex space-x-1 overflow-x-auto">
         {tabs.map(tab => {
             const Icon = tab.icon;
             return (
                 <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as ActiveTab)}
-                    className={`flex-shrink-0 flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
+                    className={`flex-shrink-0 w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2 text-sm transition-colors whitespace-nowrap rounded-md ${
                         activeTab === tab.id
-                        ? 'border-b-2 border-amber-500 text-amber-600'
-                        : 'text-slate-500 hover:text-amber-600'
+                        ? 'bg-white text-amber-600 shadow-sm font-medium'
+                        : 'text-gray-600 hover:bg-white/60'
                     }`}
                 >
                     <Icon className="h-5 w-5" />
-                    {tab.label}
+                    <span>{tab.label}</span>
                 </button>
             )
         })}

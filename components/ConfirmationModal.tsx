@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 
 interface ConfirmationModalProps {
@@ -29,7 +30,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-60 z-[60] flex justify-center items-center px-4"
+      className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[60] flex justify-center items-center px-4"
       onClick={onClose}
     >
       <div
@@ -37,12 +38,12 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6">
-          <h3 className="text-xl font-semibold text-slate-800 mb-2">{title}</h3>
-          <div className="text-slate-600 text-sm mb-6">{message}</div>
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">{title}</h3>
+          <div className="text-gray-600 text-sm mb-6">{message}</div>
           <div className="flex justify-end gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+              className="px-4 py-2 bg-white text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 rounded-lg transition-colors"
             >
               {cancelButtonText}
             </button>

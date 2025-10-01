@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { UseMockDataReturnType } from '../../hooks/useMockData';
 import { DocumentStatus } from '../../types';
@@ -208,12 +207,12 @@ export const AgingReport: React.FC<AgingReportProps> = ({ dataManager }) => {
                         <table className="w-full text-sm border-collapse">
                             <thead className="text-xs text-slate-500 uppercase bg-slate-50 tracking-wider">
                                 <tr>
-                                    <th className="px-4 py-3 text-left border-r border-slate-200">Yetkazib beruvchi</th>
-                                    <th className="px-4 py-3 text-right border-r border-slate-200">0-30 kun</th>
-                                    <th className="px-4 py-3 text-right border-r border-slate-200">31-60 kun</th>
-                                    <th className="px-4 py-3 text-right border-r border-slate-200">61-90 kun</th>
-                                    <th className="px-4 py-3 text-right border-r border-slate-200">90+ kun</th>
-                                    <th className="px-4 py-3 text-right font-bold">Jami qarz</th>
+                                    <th className="px-4 py-3 font-medium text-left border-r border-slate-200">Yetkazib beruvchi</th>
+                                    <th className="px-4 py-3 font-medium text-right border-r border-slate-200">0-30 kun</th>
+                                    <th className="px-4 py-3 font-medium text-right border-r border-slate-200">31-60 kun</th>
+                                    <th className="px-4 py-3 font-medium text-right border-r border-slate-200">61-90 kun</th>
+                                    <th className="px-4 py-3 font-medium text-right border-r border-slate-200">90+ kun</th>
+                                    <th className="px-4 py-3 font-medium text-right">Jami qarz</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -283,9 +282,9 @@ export const AgingReport: React.FC<AgingReportProps> = ({ dataManager }) => {
                                 <table className="w-full text-sm border-collapse">
                                     <thead className="text-xs text-slate-500 uppercase bg-slate-50">
                                         <tr>
-                                            <th className="px-4 py-2 text-left border-r border-slate-200">Hujjat Raqami</th>
-                                            <th className="px-4 py-2 text-left border-r border-slate-200">Sana</th>
-                                            <th className="px-4 py-2 text-right">Summa</th>
+                                            <th className="px-4 py-2 text-left font-medium border-r border-slate-200">Hujjat Raqami</th>
+                                            <th className="px-4 py-2 text-left font-medium border-r border-slate-200">Sana</th>
+                                            <th className="px-4 py-2 text-right font-medium">Summa</th>
                                         </tr>
                                     </thead>
                                     <tbody>

@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Payment, PaymentMethod } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
@@ -96,11 +95,11 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ dataManager }) => {
         <table className="w-full text-sm text-left border-collapse">
           <thead className="text-xs text-slate-500 uppercase bg-slate-50 tracking-wider">
             <tr>
-              <th scope="col" className="px-6 py-3 border-r border-slate-200">Raqam / Sana</th>
-              <th scope="col" className="px-6 py-3 border-r border-slate-200">Yetkazib beruvchi</th>
-              <th scope="col" className="px-6 py-3 text-right border-r border-slate-200">Summa</th>
-              <th scope="col" className="px-6 py-3 border-r border-slate-200">To'lov usuli</th>
-              <th scope="col" className="px-6 py-3">Izoh</th>
+              <th scope="col" className="px-6 py-3 font-medium border-r border-slate-200">Raqam / Sana</th>
+              <th scope="col" className="px-6 py-3 font-medium border-r border-slate-200">Yetkazib beruvchi</th>
+              <th scope="col" className="px-6 py-3 font-medium text-right border-r border-slate-200">Summa</th>
+              <th scope="col" className="px-6 py-3 font-medium border-r border-slate-200">To'lov usuli</th>
+              <th scope="col" className="px-6 py-3 font-medium">Izoh</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">

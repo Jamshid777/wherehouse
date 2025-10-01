@@ -1,5 +1,6 @@
 
 
+
 import React, { useState } from 'react';
 import { UseMockDataReturnType } from '../../hooks/useMockData';
 import { TurnoverStatementReport } from './reports/TurnoverStatementReport';
@@ -12,8 +13,6 @@ import { SupplierIcon } from './icons/SupplierIcon';
 import { ClockIcon } from './icons/ClockIcon';
 import { PaymentsReport } from './reports/PaymentsReport';
 import { PaymentIcon } from './icons/PaymentIcon';
-import { ProductionReport } from './reports/ProductionReport';
-import { ProductionIcon } from './icons/ProductionIcon';
 
 interface ReportsViewProps {
   dataManager: UseMockDataReturnType;
@@ -22,11 +21,10 @@ interface ReportsViewProps {
   appMode: 'pro' | 'lite';
 }
 
-type ActiveTab = 'critical_stock' | 'production' | 'payments_report' | 'turnover' | 'supplier_balance' | 'aging';
+type ActiveTab = 'critical_stock' | 'payments_report' | 'turnover' | 'supplier_balance' | 'aging';
 
 const tabs = [
     { id: 'critical_stock', label: 'Qoldiqlar', icon: BalanceIcon },
-    { id: 'production', label: 'Ishlab Chiqarish', icon: ProductionIcon },
     { id: 'supplier_balance', label: 'Yetkazib beruvchilar balansi', icon: SupplierIcon },
     { id: 'payments_report', label: 'To\'lovlar Hisoboti', icon: PaymentIcon },
     { id: 'aging', label: 'Qarzdorlik Muddati', icon: ClockIcon },
@@ -40,8 +38,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ dataManager, navigate,
     switch (activeTab) {
       case 'critical_stock':
         return <StockOverviewReport dataManager={dataManager} navigate={navigate} defaultWarehouseId={defaultWarehouseId} appMode={appMode} />;
-      case 'production':
-        return <ProductionReport dataManager={dataManager} />;
       case 'payments_report':
         return <PaymentsReport dataManager={dataManager} />;
       case 'turnover':

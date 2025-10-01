@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { UseMockDataReturnType } from '../../hooks/useMockData';
 import { Product, Warehouse, DocumentStatus, GoodsReceiptItem, InternalTransferItem, WriteOffItem, Stock, GoodsReturnItem, GoodsReturnNote, WriteOffNote, InternalTransferNote, GoodsReceiptNote } from '../../types';

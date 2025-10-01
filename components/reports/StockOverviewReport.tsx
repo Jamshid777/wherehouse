@@ -1,8 +1,6 @@
-
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { UseMockDataReturnType } from '../../hooks/useMockData';
-import { Product, Warehouse, Stock, Unit } from '../../types';
+import { Product, Warehouse, Stock, Unit, Dish, Recipe } from '../../types';
 import { SearchIcon } from '../icons/SearchIcon';
 import { PlusIcon } from '../icons/PlusIcon';
 import { ChevronDownIcon } from '../icons/ChevronDownIcon';
@@ -25,8 +23,16 @@ interface LowStockProduct {
     difference: number;
 }
 
+interface StockableItem {
+    id: string;
+    name: string;
+    category: string;
+    unit: Unit;
+    type: 'product' | 'dish';
+}
+
 interface GroupedStockData {
-    product: Product;
+    item: StockableItem;
     warehouse: Warehouse;
     totalQty: number;
     totalValue: number;
@@ -45,6 +51,7 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
         searchTerm: '',
         category: 'all',
         warehouseId: defaultWarehouseId || 'all',
+        itemType: 'all',
     });
 
     useEffect(() => {
@@ -72,9 +79,11 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
         setTurnoverModalData({ product, warehouse });
     };
 
-    const balanceCategories = useMemo(() => {
-        return ['all', ...new Set(dataManager.products.map(p => p.category))];
-    }, [dataManager.products]);
+    const allCategories = useMemo(() => {
+        const productCats = new Set(dataManager.products.map(p => p.category));
+        const dishCats = new Set(dataManager.dishes.map(d => d.category));
+        return ['all', ...Array.from(new Set([...productCats, ...dishCats]))];
+    }, [dataManager.products, dataManager.dishes]);
 
     useEffect(() => {
         setIsLoading(true);
@@ -86,12 +95,12 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
             setBalanceData(balanceStock);
             
             const filteredStockForLowStock = lowStockStock.filter(s =>
-                filters.warehouseId === 'all' || s.warehouseId === filters.warehouseId
+                (filters.warehouseId === 'all' || s.warehouseId === filters.warehouseId) && s.productId
             );
 
             const stockByProduct = new Map<string, number>();
             filteredStockForLowStock.forEach(s => {
-                stockByProduct.set(s.productId, (stockByProduct.get(s.productId) || 0) + s.quantity);
+                stockByProduct.set(s.productId!, (stockByProduct.get(s.productId!) || 0) + s.quantity);
             });
             
             const lowStockProducts = dataManager.products
@@ -120,14 +129,26 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
         balanceData.forEach(stockItem => {
             if (filters.warehouseId !== 'all' && stockItem.warehouseId !== filters.warehouseId) return;
             
-            const product = dataManager.products.find(p => p.id === stockItem.productId);
             const warehouse = dataManager.warehouses.find(w => w.id === stockItem.warehouseId);
-            
-            if (!product || !warehouse) return;
-            if (filters.category !== 'all' && product.category !== filters.category) return;
-            if (!product.name.toLowerCase().includes(filters.searchTerm.toLowerCase())) return;
+            if (!warehouse) return;
 
-            const key = `${product.id}_${warehouse.id}`;
+            let itemInfo: StockableItem | null = null;
+            if (stockItem.productId) {
+                const product = dataManager.products.find(p => p.id === stockItem.productId);
+                if (product) itemInfo = { ...product, type: 'product' };
+            } else if (stockItem.dishId) {
+                const dish = dataManager.dishes.find(d => d.id === stockItem.dishId);
+                const recipe = dataManager.recipes.find(r => r.dishId === stockItem.dishId);
+                if (dish && recipe) itemInfo = { id: dish.id, name: dish.name, category: dish.category, unit: recipe.unit, type: 'dish' };
+            }
+
+            if (!itemInfo) return;
+
+            if (filters.itemType !== 'all' && itemInfo.type !== filters.itemType) return;
+            if (filters.category !== 'all' && itemInfo.category !== filters.category) return;
+            if (!itemInfo.name.toLowerCase().includes(filters.searchTerm.toLowerCase())) return;
+
+            const key = `${itemInfo.type}-${itemInfo.id}_${warehouse.id}`;
             const existing = grouped.get(key);
 
             if (existing) {
@@ -136,7 +157,7 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
                 existing.batches.push(stockItem);
             } else {
                 grouped.set(key, {
-                    product,
+                    item: itemInfo,
                     warehouse,
                     totalQty: stockItem.quantity,
                     totalValue: stockItem.quantity * stockItem.cost,
@@ -145,9 +166,9 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
             }
         });
         
-        return Array.from(grouped.values()).sort((a,b) => a.product.name.localeCompare(b.product.name));
+        return Array.from(grouped.values()).sort((a,b) => a.item.name.localeCompare(b.item.name));
 
-    }, [balanceData, filters, dataManager.products, dataManager.warehouses]);
+    }, [balanceData, filters, dataManager.products, dataManager.dishes, dataManager.recipes, dataManager.warehouses]);
 
     const totalAssets = useMemo(() => {
         if (!balanceGroupedData) return 0;
@@ -177,19 +198,29 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
                             <input
                                 type="text"
                                 name="searchTerm"
-                                placeholder="Mahsulot qidirish..."
+                                placeholder="Xomashyo/Tayyor mahsulot qidirish..."
                                 value={filters.searchTerm}
                                 onChange={handleFilterChange}
                                 className="w-full md:w-48 pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition text-sm"
                             />
                         </div>
                          <select 
+                            name="itemType"
+                            value={filters.itemType} 
+                            onChange={handleFilterChange}
+                            className="w-full md:w-auto px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition text-sm"
+                        >
+                            <option value="all">Barcha Turlar</option>
+                            <option value="product">Xomashyo</option>
+                            <option value="dish">Tayyor mahsulot</option>
+                        </select>
+                         <select 
                             name="category"
                             value={filters.category} 
                             onChange={handleFilterChange}
                             className="w-full md:w-48 px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition text-sm"
                         >
-                            {balanceCategories.map(cat => <option key={cat} value={cat}>{cat === 'all' ? 'Barcha kategoriyalar' : cat}</option>)}
+                            {allCategories.map(cat => <option key={cat} value={cat}>{cat === 'all' ? 'Barcha kategoriyalar' : cat}</option>)}
                         </select>
                          <select
                             name="warehouseId"
@@ -218,180 +249,128 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
                             <table className="w-full text-sm border-collapse">
                                 <thead className="text-xs text-slate-500 uppercase bg-slate-50 tracking-wider">
                                     <tr>
-                                        <th className="px-4 py-3 text-left font-medium border-r border-slate-200">Mahsulot / Ombor</th>
-                                        <th className="px-4 py-3 text-left font-medium border-r border-slate-200">Kategoriya</th>
-                                        <th className="px-4 py-3 text-right font-medium border-r border-slate-200">Jami Miqdor</th>
-                                        <th className="px-4 py-3 text-right font-medium border-r border-slate-200">Tannarx</th>
-                                        <th className="px-4 py-3 text-right font-medium border-r border-slate-200">Jami Summa</th>
-                                        <th className="px-4 py-3 text-center font-medium"></th>
+                                        <th className="px-6 py-3 text-left font-medium border-r border-slate-200">Nomi / Ombor</th>
+                                        <th className="px-6 py-3 text-left font-medium border-r border-slate-200">Turi</th>
+                                        <th className="px-6 py-3 text-left font-medium border-r border-slate-200">Kategoriya</th>
+                                        <th className="px-6 py-3 text-right font-medium border-r border-slate-200">Jami Miqdor</th>
+                                        <th className="px-6 py-3 text-right font-medium border-r border-slate-200">Tannarx</th>
+                                        <th className="px-6 py-3 text-right font-medium border-r border-slate-200">Jami Summa</th>
+                                        <th className="px-6 py-3 text-center font-medium"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {balanceGroupedData.length > 0 ? balanceGroupedData.map((data) => {
-                                        const { product, warehouse, totalQty, totalValue, batches } = data;
-                                        const key = `${product.id}-${warehouse.id}`;
+                                        const { item, warehouse, totalQty, totalValue, batches } = data;
+                                        const key = `${item.type}-${item.id}-${warehouse.id}`;
                                         const avgCost = totalQty > 0 ? totalValue / totalQty : 0;
-                                        const lastBatch = batches.length > 0
-                                            ? batches.reduce((latest, current) => 
-                                                new Date(current.receiptDate) > new Date(latest.receiptDate) ? current : latest
-                                              )
-                                            : null;
+                                        const lastBatch = batches.length > 0 ? batches.reduce((latest, current) => new Date(current.receiptDate) > new Date(latest.receiptDate) ? current : latest) : null;
                                         const lastCost = lastBatch ? lastBatch.cost : 0;
                                         const isExpanded = expandedRows.has(key);
                                         
                                         let costIndicator = null;
                                         if (lastCost > 0 && avgCost > 0) {
-                                            // Add a small tolerance for float comparison
-                                            if (lastCost > avgCost * 1.001) {
-                                                costIndicator = <span className="text-red-500 font-bold" title="Oxirgi narx ko'tarilgan">▲</span>;
-                                            } else if (lastCost < avgCost * 0.999) {
-                                                costIndicator = <span className="text-green-500 font-bold" title="Oxirgi narx tushgan">▼</span>;
-                                            }
+                                            if (lastCost > avgCost * 1.001) costIndicator = <span className="text-red-500 font-bold" title="Oxirgi narx ko'tarilgan">▲</span>;
+                                            else if (lastCost < avgCost * 0.999) costIndicator = <span className="text-green-500 font-bold" title="Oxirgi narx tushgan">▼</span>;
                                         }
-
 
                                         return (
                                             <React.Fragment key={key}>
                                                 <tr className={`border-t ${isExpanded ? 'bg-slate-100' : 'hover:bg-slate-50'}`}>
-                                                    <td className="px-4 py-3 font-medium text-slate-900 border-r border-slate-200">
-                                                        <div 
-                                                            className={`flex items-center gap-2 ${appMode === 'pro' ? 'cursor-pointer' : ''}`}
-                                                            onClick={appMode === 'pro' ? () => handleToggleExpand(key) : undefined}
-                                                            title={appMode === 'pro' ? "Partiyalarni ko'rish" : undefined}
-                                                        >
-                                                            {appMode === 'pro' && (
-                                                                <ChevronDownIcon className={`h-4 w-4 text-slate-500 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
-                                                            )}
-                                                            <span className="flex-grow">{product.name}<span className="ml-2 text-xs text-slate-500 font-normal">({warehouse.name})</span></span>
+                                                    <td className="px-6 py-4 font-medium text-slate-900 border-r border-slate-200">
+                                                        <div className={`flex items-center gap-2 ${appMode === 'pro' ? 'cursor-pointer' : ''}`} onClick={appMode === 'pro' ? () => handleToggleExpand(key) : undefined} title={appMode === 'pro' ? "Partiyalarni ko'rish" : undefined}>
+                                                            {appMode === 'pro' && <ChevronDownIcon className={`h-4 w-4 text-slate-500 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />}
+                                                            <span className="flex-grow">{item.name}<span className="ml-2 text-xs text-slate-500 font-normal">({warehouse.name})</span></span>
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-3 text-slate-600 border-r border-slate-200">{product.category}</td>
-                                                    <td className="px-4 py-3 text-right font-mono font-semibold text-slate-800 border-r border-slate-200">
-                                                        <div 
-                                                            onClick={() => handleRowClick(product, warehouse)}
-                                                            className="inline-flex items-center justify-end gap-1.5 group transition-colors hover:text-amber-600 cursor-pointer"
-                                                            title="Kunlik harakatni ko'rish"
-                                                        >
-                                                            <span>{totalQty.toFixed(2)} <span className="text-xs text-slate-500 font-normal">{product.unit}</span></span>
-                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400 group-hover:text-amber-600 transition-transform transform group-hover:scale-110" viewBox="0 0 20 20" fill="currentColor">
-                                                              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                                                            </svg>
-                                                        </div>
+                                                    <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{item.type === 'product' ? 'Xomashyo' : 'Tayyor mahsulot'}</td>
+                                                    <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{item.category}</td>
+                                                    <td className="px-6 py-4 text-right font-mono font-semibold text-slate-800 border-r border-slate-200">
+                                                        <div className="inline-flex items-center justify-end gap-1.5">{totalQty.toFixed(2)} <span className="text-xs text-slate-500 font-normal">{item.unit}</span></div>
                                                     </td>
-                                                    <td className="px-4 py-3 font-mono border-r border-slate-200" title={`O'rtacha: ${formatCurrency(avgCost)}\nOxirgi: ${formatCurrency(lastCost)}`}>
-                                                        <div className="flex items-center justify-end gap-x-2">
-                                                            {costIndicator}
-                                                            <div className="text-right">
-                                                                <div className="font-semibold text-slate-800">{formatCurrency(avgCost)}</div>
-                                                                <div className="text-xs text-slate-500">({formatCurrency(lastCost)})</div>
-                                                            </div>
-                                                        </div>
+                                                    <td className="px-6 py-4 font-mono border-r border-slate-200" title={`O'rtacha: ${formatCurrency(avgCost)}\nOxirgi: ${formatCurrency(lastCost)}`}>
+                                                        <div className="flex items-center justify-end gap-x-2">{costIndicator}<div className="text-right"><div className="font-semibold text-slate-800">{formatCurrency(avgCost)}</div><div className="text-xs text-slate-500">({formatCurrency(lastCost)})</div></div></div>
                                                     </td>
-                                                    <td className="px-4 py-3 text-right font-mono font-bold text-slate-800 border-r border-slate-200">{formatCurrency(totalValue)}</td>
-                                                    <td className="px-4 py-3 text-center">
-                                                        <button onClick={(e) => { e.stopPropagation(); handleQuickReceipt(product); }} title="Tezkor kirim" className="p-1.5 rounded-full text-amber-600 hover:bg-amber-100 transition-colors">
-                                                            <PlusIcon className="h-5 w-5" />
-                                                        </button>
+                                                    <td className="px-6 py-4 text-right font-mono font-bold text-slate-800 border-r border-slate-200">{formatCurrency(totalValue)}</td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        {item.type === 'product' && <button onClick={(e) => { e.stopPropagation(); handleQuickReceipt(item as Product); }} title="Tezkor kirim" className="p-1.5 rounded-full text-amber-600 hover:bg-amber-100 transition-colors"><PlusIcon className="h-5 w-5" /></button>}
                                                     </td>
                                                 </tr>
                                                 {appMode === 'pro' && (
                                                     <tr>
-                                                        <td colSpan={6} className="p-0 border-0">
-                                                            <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
-                                                                <div className="overflow-hidden">
-                                                                    <div className="p-2 bg-slate-100">
-                                                                        <div className="p-2 bg-white rounded-md border">
-                                                                            <h4 className="text-xs font-semibold mb-1 px-2 text-slate-600">Partiyalar ({product.name})</h4>
-                                                                            <table className="w-full text-xs">
-                                                                                <thead className="text-slate-500">
-                                                                                    <tr>
-                                                                                        <th className="px-2 py-1 text-left border-r">Partiya №</th>
-                                                                                        <th className="px-2 py-1 text-left border-r">Kirim sanasi</th>
-                                                                                        <th className="px-2 py-1 text-left border-r">Yaroqlilik mudd.</th>
-                                                                                        <th className="px-2 py-1 text-right border-r">Qoldiq</th>
-                                                                                        <th className="px-2 py-1 text-right">Tannarx</th>
-                                                                                    </tr>
-                                                                                </thead>
-                                                                                <tbody>
-                                                                                    {batches.sort((a,b) => new Date(a.receiptDate).getTime() - new Date(b.receiptDate).getTime()).map(batch => (
-                                                                                        <tr key={batch.batchId} className="border-t">
-                                                                                            <td className="px-2 py-1.5 font-mono border-r">{batch.batchId}</td>
-                                                                                            <td className="px-2 py-1.5 border-r">{new Date(batch.receiptDate).toLocaleDateString()}</td>
-                                                                                            <td className="px-2 py-1.5 border-r">{batch.validDate ? new Date(batch.validDate).toLocaleDateString() : 'N/A'}</td>
-                                                                                            <td className="px-2 py-1.5 text-right font-mono border-r">{batch.quantity.toFixed(2)}</td>
-                                                                                            <td className="px-2 py-1.5 text-right font-mono">{formatCurrency(batch.cost)}</td>
-                                                                                        </tr>
-                                                                                    ))}
-                                                                                </tbody>
-                                                                            </table>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
+                                                        <td colSpan={7} className="p-0 border-0">
+                                                            <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}><div className="overflow-hidden"><div className="p-2 bg-slate-100"><div className="p-2 bg-white rounded-md border">
+                                                                <h4 className="text-xs font-semibold mb-1 px-2 text-slate-600">Partiyalar ({item.name})</h4>
+                                                                <table className="w-full text-xs"><thead className="text-slate-500"><tr className="border-b"><th className="px-2 py-1 text-left border-r">Partiya №</th><th className="px-2 py-1 text-left border-r">Kirim sanasi</th><th className="px-2 py-1 text-left border-r">Yaroqlilik mudd.</th><th className="px-2 py-1 text-right border-r">Qoldiq</th><th className="px-2 py-1 text-right">Tannarx</th></tr></thead>
+                                                                <tbody className="divide-y divide-slate-200">{batches.sort((a,b) => new Date(a.receiptDate).getTime() - new Date(b.receiptDate).getTime()).map(batch => (<tr key={batch.batchId}><td className="px-2 py-1.5 font-mono text-xs border-r">{batch.batchId}</td><td className="px-2 py-1.5 border-r">{new Date(batch.receiptDate).toLocaleDateString()}</td><td className="px-2 py-1.5 border-r">{batch.validDate ? new Date(batch.validDate).toLocaleDateString() : '-'}</td><td className="px-2 py-1.5 text-right font-mono border-r">{batch.quantity.toFixed(2)}</td><td className="px-2 py-1.5 text-right font-mono">{formatCurrency(batch.cost)}</td></tr>))}</tbody></table>
+                                                            </div></div></div></div>
                                                         </td>
                                                     </tr>
                                                 )}
                                             </React.Fragment>
                                         );
                                     }) : (
-                                        <tr><td colSpan={6} className="text-center py-10 text-slate-500">Ma'lumot topilmadi.</td></tr>
+                                        <tr><td colSpan={7} className="text-center py-10 text-slate-500">Qoldiqlar mavjud emas.</td></tr>
                                     )}
                                 </tbody>
-                                <tfoot className="bg-slate-100 font-bold">
+                                 <tfoot className="bg-slate-100 font-bold border-t-2 border-slate-300">
                                     <tr>
-                                        <td colSpan={4} className="px-4 py-4 text-right text-base border-r border-slate-200">Jami Aktivlar:</td>
-                                        <td className="px-4 py-4 text-right font-mono text-lg text-slate-900 border-r border-slate-200">{formatCurrency(totalAssets)}</td>
+                                        <td colSpan={5} className="px-6 py-3 text-right text-slate-800">Jami Aktivlar:</td>
+                                        <td className="px-6 py-3 text-right font-mono text-lg text-slate-900 border-r">{formatCurrency(totalAssets)}</td>
                                         <td></td>
                                     </tr>
                                 </tfoot>
                             </table>
                         </div>
+
+                        <div className="bg-red-50 border border-red-200 p-6 rounded-xl shadow-md">
+                            <h2 className="text-xl font-bold text-red-800 mb-4">{lowStockTitle}</h2>
+                            {lowStockReportData && lowStockReportData.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead className="text-xs text-red-700 uppercase bg-red-100">
+                                            <tr>
+                                                <th className="px-4 py-2 text-left">Mahsulot</th>
+                                                <th className="px-4 py-2 text-right">Minimal Zaxira</th>
+                                                <th className="px-4 py-2 text-right">Haqiqiy Qoldiq</th>
+                                                <th className="px-4 py-2 text-right">Farq</th>
+                                                <th className="px-4 py-2 text-center">Amal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-red-200">
+                                            {lowStockReportData.map(item => (
+                                                <tr key={item.product.id}>
+                                                    <td className="px-4 py-2 font-medium">{item.product.name}</td>
+                                                    <td className="px-4 py-2 text-right font-mono">{item.product.min_stock.toFixed(2)}</td>
+                                                    <td className="px-4 py-2 text-right font-mono">{item.totalQuantity.toFixed(2)}</td>
+                                                    <td className="px-4 py-2 text-right font-mono font-bold text-red-600">{item.difference.toFixed(2)}</td>
+                                                    <td className="px-4 py-2 text-center">
+                                                        <button onClick={() => handleQuickReceipt(item.product)} className="text-xs bg-amber-500 text-white px-2 py-1 rounded hover:bg-amber-600">
+                                                            Kirim qilish
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <p className="text-center text-red-700 py-4">Minimal zaxiradan kam mahsulotlar topilmadi.</p>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
 
-            <div className="bg-white p-6 rounded-xl shadow-md">
-                 <h2 className="text-2xl font-bold text-slate-800 mb-4">{lowStockTitle}</h2>
-                 
-                 {isLoading && <div className="text-center py-10">Yuklanmoqda...</div>}
-
-                 {!isLoading && lowStockReportData && (
-                     <div className="overflow-x-auto border rounded-lg max-h-[60vh]">
-                         {lowStockReportData.length > 0 ? (
-                             <table className="w-full text-sm border-collapse">
-                                 <thead className="text-xs text-slate-500 uppercase bg-slate-50 tracking-wider sticky top-0">
-                                     <tr>
-                                         <th className="px-4 py-3 text-left font-medium border-r border-slate-200">Mahsulot</th>
-                                         <th className="px-4 py-3 text-right font-medium border-r border-slate-200">Min. Zaxira</th>
-                                         <th className="px-4 py-3 text-right font-medium">Haqiqiy Qoldiq</th>
-                                     </tr>
-                                 </thead>
-                                 <tbody className="divide-y divide-slate-200">
-                                     {lowStockReportData.map(item => (
-                                         <tr key={item.product.id} className="hover:bg-slate-50">
-                                             <td className="px-4 py-3 font-medium text-slate-900 border-r border-slate-200">{item.product.name}</td>
-                                             <td className="px-4 py-3 text-right font-mono text-slate-600 border-r border-slate-200">{item.product.min_stock.toFixed(2)} {item.product.unit}</td>
-                                             <td className="px-4 py-3 text-right font-mono font-bold text-red-600">{item.totalQuantity.toFixed(2)} {item.product.unit}</td>
-                                         </tr>
-                                     ))}
-                                 </tbody>
-                             </table>
-                         ) : (
-                             <div className="text-center py-10 text-slate-500">
-                                 Minimal zaxiradan kam mahsulotlar mavjud emas.
-                             </div>
-                         )}
-                     </div>
-                 )}
-            </div>
-             <ProductTurnoverModal
-                isOpen={!!turnoverModalData}
-                onClose={() => setTurnoverModalData(null)}
-                product={turnoverModalData?.product || null}
-                warehouse={turnoverModalData?.warehouse || null}
-                asOfDate={filters.asOfDate}
-                dataManager={dataManager}
-            />
+            {turnoverModalData && (
+                <ProductTurnoverModal
+                    isOpen={!!turnoverModalData}
+                    onClose={() => setTurnoverModalData(null)}
+                    product={turnoverModalData.product}
+                    warehouse={turnoverModalData.warehouse}
+                    asOfDate={filters.asOfDate}
+                    dataManager={dataManager}
+                />
+            )}
         </div>
     );
 };

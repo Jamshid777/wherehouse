@@ -17,7 +17,6 @@ export interface Product {
 export interface Warehouse {
   id:string;
   name: string;
-  location: string;
   is_active: boolean;
 }
 
@@ -41,8 +40,9 @@ export enum DocumentStatus {
 
 // Stock is now managed by batch. Each record represents a specific batch of a product in a warehouse.
 export interface Stock {
-  batchId: string; // Unique ID for each batch, e.g., grn1-item1
-  productId: string;
+  batchId: string; // Unique ID for each batch, e.g., grn1-item1 or prod-wo123-d1
+  productId?: string; // For raw materials
+  dishId?: string; // For finished goods
   warehouseId: string;
   quantity: number;
   cost: number; // Cost at the time of receipt for this specific batch
@@ -78,7 +78,6 @@ export enum WriteOffReason {
   SPOILAGE = 'Buzilish',
   LOSS = 'Yo\'qotish',
   STAFF_MEALS = 'Xodimlar ovqati',
-  PRODUCTION = 'Ishlab chiqarish',
   INVENTORY_SHORTAGE = 'Kamomad (Inventarizatsiya)',
   OTHER = 'Boshqa',
 }
@@ -192,22 +191,129 @@ export interface Payment {
     comment: string;
 }
 
+// 3.7 Narxni Korrektirovka Qilish Hujjati (Price Adjustment Note)
+export interface PriceAdjustmentItem {
+    productId: string;
+    batchId: string; // From GoodsReceiptItem
+    originalQuantity: number; // From GoodsReceiptItem, for balance calculation
+    oldPrice: number;
+    newPrice: number;
+    reason: string;
+}
+
+export interface PriceAdjustmentNote {
+    id: string;
+    doc_number: string;
+    date: string; // ISO string format
+    status: DocumentStatus;
+    goodsReceiptNoteId: string;
+    supplier_id: string;
+    warehouse_id: string;
+    items: PriceAdjustmentItem[];
+}
+
+// 3.8 Ishlab Chiqarish Hujjati (Production Note)
+export interface ProductionProducedItem {
+  dishId: string;
+  quantity: number;
+  cost: number; // calculated cost of goods produced
+}
+
+export interface ProductionNote {
+  id: string;
+  doc_number: string;
+  warehouse_id: string;
+  date: string; // ISO string format
+  status: DocumentStatus;
+  consumedItems: WriteOffItem[]; // Ingredients consumed
+  producedItems: ProductionProducedItem[]; // Dishes produced
+}
+
+
 // ===============================================
 // NEW TYPES FOR PRODUCTION
 // ===============================================
 export interface RecipeItem {
   productId: string;
-  quantity: number; // required per one unit of the dish
+  grossQuantity: number;
+  netQuantity: number;
 }
 
 export interface Recipe {
   dishId: string;
   items: RecipeItem[];
+  outputYield: number;
+  unit: Unit;
 }
 
 export interface Dish {
   id: string;
   name: string;
-  unit: Unit;
-  techCardUrl: string;
+  category: string;
+  price: number;
+}
+
+// ===============================================
+// NEW TYPES FOR SALES
+// ===============================================
+
+export interface Client {
+  id: string;
+  name: string;
+  phone?: string;
+  address?: string;
+  is_active: boolean;
+  initial_balance: number; // >0 if client owes us, <0 if we owe them
+}
+
+export interface ClientPaymentLink {
+    invoiceId: string;
+    amountApplied: number;
+}
+
+export interface ClientPayment {
+    id:string;
+    doc_number: string;
+    date: string;
+    client_id: string;
+    amount: number;
+    payment_method: PaymentMethod;
+    links: ClientPaymentLink[];
+    comment: string;
+}
+
+export interface SalesInvoiceItem {
+  dishId: string;
+  quantity: number;
+  price: number; // Sale price
+  cost: number; // COGS, calculated on confirmation
+}
+
+export interface SalesInvoice {
+  id: string;
+  doc_number: string;
+  client_id: string;
+  warehouse_id: string;
+  date: string; // ISO string format
+  status: DocumentStatus;
+  items: SalesInvoiceItem[];
+  paid_amount: number; // For accounts receivable tracking
+  payment_method?: PaymentMethod; // Temporary holder for payment on creation
+}
+
+// ===============================================
+// NEW TYPES FOR EXPENSES
+// ===============================================
+
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+}
+
+export interface Expense {
+  id: string;
+  date: string; // ISO string format
+  categoryId: string;
+  amount: number;
+  comment?: string;
 }

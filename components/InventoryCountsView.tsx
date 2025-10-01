@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { InventoryNote, InventoryItem, DocumentStatus, Stock } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
@@ -82,6 +80,7 @@ export const InventoryCountsView: React.FC<InventoryCountsViewProps> = ({ dataMa
   const handleConfirm = () => {
     if (!noteToConfirm) return;
     confirmInventoryNote(noteToConfirm);
+    setNoteToConfirm(null);
   };
 
   return (
@@ -133,7 +132,7 @@ export const InventoryCountsView: React.FC<InventoryCountsViewProps> = ({ dataMa
                 </td>
                 <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{warehouses.find(w => w.id === note.warehouse_id)?.name || 'Noma\'lum'}</td>
                 <td className="px-6 py-4 border-r border-slate-200">
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${note.status === DocumentStatus.CONFIRMED ? 'bg-amber-100 text-amber-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${note.status === DocumentStatus.CONFIRMED ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                     {note.status === DocumentStatus.CONFIRMED ? 'Tasdiqlangan' : 'Qoralama'}
                   </span>
                 </td>
@@ -214,7 +213,7 @@ const InventoryFormModal: React.FC<InventoryFormModalProps> = ({isOpen, onClose,
         }
         
         const inventoryItems = products.map(p => {
-            const totalQuantity = getTotalStockQuantity(p.id, formData.warehouse_id);
+            const totalQuantity = getTotalStockQuantity({ productId: p.id }, formData.warehouse_id);
             return {
                 productId: p.id,
                 planned_quantity: totalQuantity,

@@ -44,21 +44,21 @@ export const WarehousesHubView: React.FC<WarehousesHubViewProps> = ({ dataManage
 
   return (
     <div className="space-y-6">
-      <div className="flex border-b border-slate-200 overflow-x-auto">
+      <div className="bg-gray-100 p-1 rounded-lg flex space-x-1 overflow-x-auto">
         {tabs.map(tab => {
             const Icon = tab.icon;
             return (
                 <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as ActiveTab)}
-                    className={`flex-shrink-0 flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
+                    className={`flex-shrink-0 w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2 text-sm transition-colors whitespace-nowrap rounded-md ${
                         activeTab === tab.id
-                        ? 'border-b-2 border-amber-500 text-amber-600'
-                        : 'text-slate-500 hover:text-amber-600'
+                        ? 'bg-white text-amber-600 shadow-sm font-medium'
+                        : 'text-gray-600 hover:bg-white/60'
                     }`}
                 >
                     <Icon className="h-5 w-5" />
-                    {tab.label}
+                    <span>{tab.label}</span>
                 </button>
             )
         })}

@@ -106,18 +106,18 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ dataManager }) => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-md">
+    <div className="bg-white p-6 rounded-xl shadow-lg">
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        <h2 className="text-2xl font-bold text-slate-800">Mahsulotlar Nomenklaturasi</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Mahsulotlar Nomenklaturasi</h2>
         <div className="flex items-center gap-4 w-full md:w-auto">
           <div className="relative w-full md:w-64">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
               type="text"
               placeholder="Qidirish..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition"
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition"
             />
           </div>
           <button
@@ -132,27 +132,27 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ dataManager }) => {
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left border-collapse">
-          <thead className="text-xs text-slate-600 bg-slate-50 border-b-2 border-slate-200">
+          <thead className="text-xs text-gray-500 uppercase bg-gray-50 tracking-wider">
             <tr>
-              <th scope="col" className="px-6 py-3 border-r border-slate-200">T/r</th>
-              <th scope="col" className="px-6 py-3 border-r border-slate-200">Nomi</th>
-              <th scope="col" className="px-6 py-3 border-r border-slate-200">O'lchov birligi</th>
-              <th scope="col" className="px-6 py-3 border-r border-slate-200">Guruhi</th>
-              <th scope="col" className="px-6 py-3 text-right border-r border-slate-200">Minimal zaxira</th>
-              <th scope="col" className="px-6 py-3 border-r border-slate-200" style={{minWidth: '300px'}}>Yetkazib beruvchilar (Narxi)</th>
-              <th scope="col" className="px-6 py-3 text-center">Amallar</th>
+              <th scope="col" className="px-6 py-3 font-medium border-r border-gray-200">T/r</th>
+              <th scope="col" className="px-6 py-3 font-medium border-r border-gray-200">Nomi</th>
+              <th scope="col" className="px-6 py-3 font-medium border-r border-gray-200">O'lchov birligi</th>
+              <th scope="col" className="px-6 py-3 font-medium border-r border-gray-200">Guruhi</th>
+              <th scope="col" className="px-6 py-3 font-medium text-right border-r border-gray-200">Minimal zaxira</th>
+              <th scope="col" className="px-6 py-3 font-medium border-r border-gray-200" style={{minWidth: '300px'}}>Yetkazib beruvchilar (Narxi)</th>
+              <th scope="col" className="px-6 py-3 font-medium text-center">Amallar</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
+          <tbody className="divide-y divide-gray-200">
             {filteredProducts.map((product, index) => (
-              <tr key={product.id} className="hover:bg-slate-50">
-                <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{filteredProducts.length - index}</td>
-                <td className="px-6 py-4 font-medium text-slate-900 whitespace-nowrap border-r border-slate-200">{product.name}</td>
-                <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{product.unit}</td>
-                <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{product.category}</td>
-                <td className="px-6 py-4 text-slate-600 text-right font-mono border-r border-slate-200">{product.min_stock}</td>
-                <td className="px-6 py-4 text-slate-600 border-r border-slate-200">
-                    {supplierPricesByProduct.get(product.id) || <span className="text-slate-400">Ma'lumot yo'q</span>}
+              <tr key={product.id} className="hover:bg-amber-50">
+                <td className="px-6 py-4 text-gray-600 border-r border-gray-200">{filteredProducts.length - index}</td>
+                <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap border-r border-gray-200">{product.name}</td>
+                <td className="px-6 py-4 text-gray-600 border-r border-gray-200">{product.unit}</td>
+                <td className="px-6 py-4 text-gray-600 border-r border-gray-200">{product.category}</td>
+                <td className="px-6 py-4 text-gray-600 text-right font-mono border-r border-gray-200">{product.min_stock}</td>
+                <td className="px-6 py-4 text-gray-600 border-r border-gray-200">
+                    {supplierPricesByProduct.get(product.id) || <span className="text-gray-400">Ma'lumot yo'q</span>}
                 </td>
                 <td className="px-6 py-4 text-center">
                   <div className="flex justify-center items-center gap-4">
@@ -168,7 +168,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ dataManager }) => {
             ))}
              {filteredProducts.length === 0 && (
                 <tr>
-                    <td colSpan={7} className="text-center py-10 text-slate-500">
+                    <td colSpan={7} className="text-center py-10 text-gray-500">
                         Mahsulotlar topilmadi.
                     </td>
                 </tr>

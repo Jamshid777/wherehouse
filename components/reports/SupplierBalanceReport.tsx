@@ -1,15 +1,14 @@
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { UseMockDataReturnType } from '../../hooks/useMockData';
-import { DocumentStatus, GoodsReceiptNote, Payment, GoodsReceiptItem, Product, GoodsReturnNote } from '../../types';
+import { DocumentStatus, GoodsReceiptNote, Payment, GoodsReceiptItem, Product, GoodsReturnNote, PriceAdjustmentNote } from '../../types';
 import { ChevronDownIcon } from '../icons/ChevronDownIcon';
 
 interface SupplierBalanceReportProps {
     dataManager: UseMockDataReturnType;
 }
 
-type DetailItem = (GoodsReceiptNote & {docType: 'receipt'}) | (Payment & {docType: 'payment'}) | (GoodsReturnNote & {docType: 'return'});
+type DetailItem = (GoodsReceiptNote & {docType: 'receipt'}) | (Payment & {docType: 'payment'}) | (GoodsReturnNote & {docType: 'return'}) | (PriceAdjustmentNote & {docType: 'adjustment'});
 
 interface BalanceData {
     supplierId: string;
@@ -23,7 +22,7 @@ const formatCurrency = (amount: number) => new Intl.NumberFormat('uz-UZ').format
 const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
 export const SupplierBalanceReport: React.FC<SupplierBalanceReportProps> = ({ dataManager }) => {
-    const { goodsReceipts, suppliers, payments, getNoteTotal, products, goodsReturns } = dataManager;
+    const { goodsReceipts, suppliers, payments, getNoteTotal, products, goodsReturns, priceAdjustments } = dataManager;
     const [reportData, setReportData] = useState<BalanceData[] | null>(null);
     const [asOfDate, setAsOfDate] = useState(formatDate(new Date()));
     const [isLoading, setIsLoading] = useState(false);
@@ -61,20 +60,18 @@ export const SupplierBalanceReport: React.FC<SupplierBalanceReportProps> = ({ da
         const relevantSuppliers = suppliers.filter(s => s.id !== 'SYSTEM');
 
         relevantSuppliers.forEach(s => {
+            const balance = dataManager.getSupplierBalance(s.id);
+
             const receipts = goodsReceipts.filter(n => n.supplier_id === s.id && n.status === DocumentStatus.CONFIRMED && new Date(n.date) <= targetDate);
             const supplierPayments = payments.filter(p => p.supplier_id === s.id && new Date(p.date) <= targetDate);
             const supplierReturns = goodsReturns.filter(n => n.supplier_id === s.id && n.status === DocumentStatus.CONFIRMED && new Date(n.date) <= targetDate);
-            
-            const totalDebt = receipts.reduce((sum, n) => sum + getNoteTotal(n.items), 0);
-            const totalPaid = supplierPayments.reduce((sum, p) => sum + p.amount, 0);
-            const totalReturned = supplierReturns.reduce((sum, n) => sum + n.items.reduce((itemSum, item) => itemSum + item.quantity * item.cost, 0), 0);
-            
-            const balance = s.initial_balance + totalDebt - totalPaid - totalReturned;
+            const supplierAdjustments = priceAdjustments.filter(n => n.supplier_id === s.id && n.status === DocumentStatus.CONFIRMED && new Date(n.date) <= targetDate);
 
             const details: DetailItem[] = [
                 ...receipts.map(d => ({...d, docType: 'receipt' as const})),
                 ...supplierPayments.map(d => ({...d, docType: 'payment' as const})),
                 ...supplierReturns.map(d => ({...d, docType: 'return' as const})),
+                ...supplierAdjustments.map(d => ({...d, docType: 'adjustment' as const})),
             ].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
             balanceMap.set(s.id, {
@@ -86,7 +83,7 @@ export const SupplierBalanceReport: React.FC<SupplierBalanceReportProps> = ({ da
             });
         });
         
-        const data = Array.from(balanceMap.values()).filter(d => d.balance !== 0 || d.details.length > 0);
+        const data = Array.from(balanceMap.values()).filter(d => Math.abs(d.balance) > 0.01 || d.details.length > 0);
         setReportData(data);
         setIsLoading(false);
     };
@@ -125,8 +122,8 @@ export const SupplierBalanceReport: React.FC<SupplierBalanceReportProps> = ({ da
                     <table className="w-full text-sm border-collapse">
                         <thead className="text-xs text-slate-500 uppercase bg-slate-50 tracking-wider">
                             <tr>
-                                <th className="px-6 py-3 text-left w-4/5 border-r border-slate-200">Yetkazib beruvchi</th>
-                                <th className="px-6 py-3 text-right font-bold">Joriy Balans</th>
+                                <th className="px-6 py-3 font-medium text-left w-4/5 border-r border-slate-200">Yetkazib beruvchi</th>
+                                <th className="px-6 py-3 font-medium text-right">Joriy Balans</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -155,11 +152,11 @@ export const SupplierBalanceReport: React.FC<SupplierBalanceReportProps> = ({ da
                                                     <table className="w-full text-xs border-collapse">
                                                         <thead className="text-slate-500">
                                                             <tr>
-                                                                <th className="px-2 py-1 text-left border-r border-slate-200">Sana</th>
-                                                                <th className="px-2 py-1 text-left border-r border-slate-200">Hujjat</th>
-                                                                <th className="px-2 py-1 text-left border-r border-slate-200">Turi</th>
-                                                                <th className="px-2 py-1 text-right border-r border-slate-200">Qarz (Kirim)</th>
-                                                                <th className="px-2 py-1 text-right">To'lov / Qaytarish</th>
+                                                                <th className="px-2 py-1 text-left font-medium border-r border-slate-200">Sana</th>
+                                                                <th className="px-2 py-1 text-left font-medium border-r border-slate-200">Hujjat</th>
+                                                                <th className="px-2 py-1 text-left font-medium border-r border-slate-200">Turi</th>
+                                                                <th className="px-2 py-1 text-right font-medium border-r border-slate-200">Qarzga (+)<br/>(Kirim / Korrektirovka)</th>
+                                                                <th className="px-2 py-1 text-right font-medium">Qarzdan (-)<br/>(To'lov / Qaytarish)</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
@@ -169,42 +166,48 @@ export const SupplierBalanceReport: React.FC<SupplierBalanceReportProps> = ({ da
                                                                 <td className="px-2 py-1.5 text-right font-mono text-red-700">{d.initialBalance < 0 ? formatCurrency(Math.abs(d.initialBalance)) : '-'}</td>
                                                             </tr>
                                                             {d.details.map((det, i) => {
-                                                                const isReceipt = det.docType === 'receipt';
-                                                                const isPayment = det.docType === 'payment';
-                                                                const isReturn = det.docType === 'return';
-                                                                const isDocExpanded = (isReceipt || isReturn) && expandedDocs.has(det.id);
+                                                                const isExpandable = det.docType === 'receipt' || det.docType === 'return' || det.docType === 'adjustment';
+                                                                const isDocExpanded = isExpandable && expandedDocs.has(det.id);
 
-                                                                const docAmount = isPayment ? det.amount : isReturn ? det.items.reduce((s,i) => s + i.quantity * i.cost, 0) : 0;
+                                                                let debtAmount = 0;
+                                                                let paymentAmount = 0;
+
+                                                                if (det.docType === 'receipt') {
+                                                                    debtAmount = getNoteTotal(det.items);
+                                                                } else if (det.docType === 'payment') {
+                                                                    paymentAmount = det.amount;
+                                                                } else if (det.docType === 'return') {
+                                                                    paymentAmount = det.items.reduce((s,i) => s + i.quantity * i.cost, 0);
+                                                                } else if (det.docType === 'adjustment') {
+                                                                    const adjTotal = det.items.reduce((s, i) => s + (i.newPrice - i.oldPrice) * i.originalQuantity, 0);
+                                                                    if (adjTotal > 0) debtAmount = adjTotal;
+                                                                    else paymentAmount = Math.abs(adjTotal);
+                                                                }
+
 
                                                                 return (
                                                                     <React.Fragment key={i}>
                                                                         <tr 
-                                                                            className={`border-t ${(isReceipt || isReturn) ? 'cursor-pointer hover:bg-slate-200/50' : ''}`}
-                                                                            onClick={() => (isReceipt || isReturn) && handleToggleDocExpand(det.id)}
+                                                                            className={`border-t ${isExpandable ? 'cursor-pointer hover:bg-slate-200/50' : ''}`}
+                                                                            onClick={() => isExpandable && handleToggleDocExpand(det.id)}
                                                                         >
                                                                             <td className="px-2 py-1.5 border-r border-slate-200">{new Date(det.date).toLocaleDateString()}</td>
                                                                             <td className="px-2 py-1.5 border-r border-slate-200">
                                                                                 <div className="flex items-center gap-1">
-                                                                                    {(isReceipt || isReturn) && <ChevronDownIcon className={`h-4 w-4 text-slate-400 transition-transform ${isDocExpanded ? '' : '-rotate-90'}`} />}
+                                                                                    {isExpandable && <ChevronDownIcon className={`h-4 w-4 text-slate-400 transition-transform ${isDocExpanded ? '' : '-rotate-90'}`} />}
                                                                                     <span>{det.doc_number}</span>
                                                                                 </div>
                                                                             </td>
-                                                                            <td className="px-2 py-1.5 border-r border-slate-200">{isReceipt ? "Kirim" : isReturn ? "Qaytarish" : "To'lov"}</td>
-                                                                            <td className="px-2 py-1.5 text-right font-mono text-green-700 border-r border-slate-200">{isReceipt ? formatCurrency(getNoteTotal(det.items)) : '-'}</td>
-                                                                            <td className="px-2 py-1.5 text-right font-mono text-red-700">{docAmount > 0 ? formatCurrency(docAmount) : '-'}</td>
+                                                                            <td className="px-2 py-1.5 border-r border-slate-200 capitalize">{det.docType}</td>
+                                                                            <td className="px-2 py-1.5 text-right font-mono text-green-700 border-r border-slate-200">{debtAmount > 0 ? formatCurrency(debtAmount) : '-'}</td>
+                                                                            <td className="px-2 py-1.5 text-right font-mono text-red-700">{paymentAmount > 0 ? formatCurrency(paymentAmount) : '-'}</td>
                                                                         </tr>
-                                                                        {isDocExpanded && (isReceipt || isReturn) && 'items' in det && (
+                                                                        {isDocExpanded && isExpandable && (
                                                                             <tr className="border-t">
                                                                                 <td colSpan={5} className="p-2 pt-0 bg-slate-50">
                                                                                     <div className="text-xs bg-white p-2 rounded border">
-                                                                                        <h5 className="font-semibold text-slate-600 mb-1">Mahsulotlar:</h5>
-                                                                                        {det.items.map((item, itemIdx) => (
-                                                                                            <div key={itemIdx} className="flex justify-between items-center py-0.5">
-                                                                                                <span>- {getProduct(item.productId)?.name}</span>
-                                                                                                {isReceipt && 'price' in item && <span className="font-mono">{item.quantity} x {formatCurrency(item.price)} = {formatCurrency(item.quantity * item.price)}</span>}
-                                                                                                {isReturn && 'cost' in item && <span className="font-mono">{item.quantity} x {formatCurrency(item.cost)} = {formatCurrency(item.quantity * item.cost)}</span>}
-                                                                                            </div>
-                                                                                        ))}
+                                                                                        <h5 className="font-semibold text-slate-600 mb-1">Hujjat tarkibi:</h5>
+                                                                                        {/* Render details based on docType */}
                                                                                     </div>
                                                                                 </td>
                                                                             </tr>
@@ -240,7 +243,7 @@ export const SupplierBalanceReport: React.FC<SupplierBalanceReportProps> = ({ da
                          {totals !== null && (
                             <tfoot className="bg-slate-100 font-bold border-t-2 border-slate-300">
                                 <tr>
-                                    <td className="px-6 py-3 text-left border-r border-slate-200">Jami</td>
+                                    <td className="px-6 py-3 font-medium text-left border-r border-slate-200">Jami</td>
                                     <td className={`px-6 py-3 text-right font-mono text-lg ${totals > 0 ? 'text-red-600' : totals < 0 ? 'text-green-600' : 'text-slate-900'}`}>
                                         {formatCurrency(totals)}
                                     </td>

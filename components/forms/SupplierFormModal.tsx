@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../Modal';
 import { Supplier } from '../../types';
+import { ChevronDownIcon } from '../icons/ChevronDownIcon';
 
 export interface SupplierFormModalProps {
     isOpen: boolean;
@@ -16,6 +16,7 @@ export const SupplierFormModal: React.FC<SupplierFormModalProps> = ({isOpen, onC
         name: '', inn: '', phone: '', address: '', initial_balance: 0
     });
     const [innError, setInnError] = useState('');
+    const [isExpanded, setIsExpanded] = useState(false);
 
     useEffect(() => {
         if(isOpen){
@@ -27,8 +28,15 @@ export const SupplierFormModal: React.FC<SupplierFormModalProps> = ({isOpen, onC
                     address: supplier.address || '',
                     initial_balance: supplier.initial_balance || 0,
                 });
+                // Expand if optional fields have data
+                if (supplier.inn || supplier.phone || supplier.address) {
+                    setIsExpanded(true);
+                } else {
+                    setIsExpanded(false);
+                }
             } else {
                 setFormData({ name: '', inn: '', phone: '', address: '', initial_balance: 0 });
+                setIsExpanded(false);
             }
             setInnError('');
         }
@@ -78,25 +86,46 @@ export const SupplierFormModal: React.FC<SupplierFormModalProps> = ({isOpen, onC
                     <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">Tashkilot nomi <span className="text-red-500">*</span></label>
                     <input type="text" name="name" id="name" value={formData.name} onChange={handleChange} required className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-amber-500" />
                 </div>
-                <div>
-                    <label htmlFor="inn" className="block text-sm font-medium text-slate-700 mb-1">INN (STIR)</label>
-                    <input type="text" name="inn" id="inn" value={formData.inn} onChange={handleChange} className={`w-full px-3 py-2.5 border rounded-lg focus:ring-1 ${innError ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-amber-500'}`} />
-                    {innError && <p className="text-xs text-red-600 mt-1">{innError}</p>}
-                </div>
-                <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-1">Telefon raqami</label>
-                    <input type="text" name="phone" id="phone" value={formData.phone} onChange={handleChange} className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-amber-500" />
-                </div>
                  <div>
                     <label htmlFor="initial_balance" className="block text-sm font-medium text-slate-700 mb-1">Boshlang'ich qoldiq <span className="text-red-500">*</span></label>
                     <input type="number" step="any" name="initial_balance" id="initial_balance" value={formData.initial_balance} onChange={handleChange} required className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-amber-500" />
                     <p className="text-xs text-slate-500 mt-1">Qarzimiz bo'lsa musbat (+), bizga qarzi bo'lsa manfiy (-) kiriting.</p>
                 </div>
-                <div>
-                    <label htmlFor="address" className="block text-sm font-medium text-slate-700 mb-1">Manzil</label>
-                    <input type="text" name="address" id="address" value={formData.address} onChange={handleChange} className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-amber-500" />
+                
+                <div className="border-t border-b border-slate-200 -mx-6 px-6 py-2">
+                    <button
+                        type="button"
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className="w-full flex justify-between items-center text-sm font-medium text-slate-600 hover:text-amber-600"
+                        aria-expanded={isExpanded}
+                    >
+                        <span>Qo'shimcha ma'lumotlar (STIR, Telefon, Manzil)</span>
+                        <ChevronDownIcon className={`h-5 w-5 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
+                    </button>
                 </div>
-                <div className="flex justify-end gap-3 pt-4">
+
+                <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                    <div className="overflow-hidden">
+                        <div className="space-y-4 pt-2">
+                            <div>
+                                <label htmlFor="inn" className="block text-sm font-medium text-slate-700 mb-1">INN (STIR)</label>
+                                <input type="text" name="inn" id="inn" value={formData.inn} onChange={handleChange} className={`w-full px-3 py-2.5 border rounded-lg focus:ring-1 ${innError ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-amber-500'}`} />
+                                {innError && <p className="text-xs text-red-600 mt-1">{innError}</p>}
+                            </div>
+                            <div>
+                                <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-1">Telefon raqami</label>
+                                <input type="text" name="phone" id="phone" value={formData.phone} onChange={handleChange} className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-amber-500" />
+                            </div>
+                            <div>
+                                <label htmlFor="address" className="block text-sm font-medium text-slate-700 mb-1">Manzil</label>
+                                <input type="text" name="address" id="address" value={formData.address} onChange={handleChange} className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-amber-500" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div className="flex justify-end gap-3 pt-4 border-t">
                     <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">Bekor qilish</button>
                     <button type="submit" disabled={!!innError} className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700 disabled:from-amber-300 disabled:to-amber-400 disabled:cursor-not-allowed">Saqlash</button>
                 </div>

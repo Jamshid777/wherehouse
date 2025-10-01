@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { GoodsReturnNote, GoodsReturnItem, DocumentStatus, Stock, Product, GoodsReceiptNote } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
@@ -6,6 +7,8 @@ import { PlusIcon } from './icons/PlusIcon';
 import { TrashIcon } from './icons/TrashIcon';
 import { EditIcon } from './icons/EditIcon';
 import { ConfirmationModal } from './ConfirmationModal';
+import { ChevronDownIcon } from './icons/ChevronDownIcon';
+import { FifoBreakdownModal } from './FifoBreakdownModal';
 
 interface GoodsReturnsViewProps {
   dataManager: UseMockDataReturnType;
@@ -16,10 +19,12 @@ const formatCurrency = (amount: number) => new Intl.NumberFormat('uz-UZ').format
 const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
 export const GoodsReturnsView: React.FC<GoodsReturnsViewProps> = ({ dataManager, defaultWarehouseId }) => {
-  const { goodsReturns, warehouses, suppliers, addGoodsReturn, updateGoodsReturn, confirmGoodsReturn } = dataManager;
+  const { goodsReturns, warehouses, suppliers, products, addGoodsReturn, updateGoodsReturn, confirmGoodsReturn } = dataManager;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<GoodsReturnNote | null>(null);
   const [noteToConfirm, setNoteToConfirm] = useState<string | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [breakdownModalData, setBreakdownModalData] = useState<{item: GoodsReturnItem, product: Product | undefined} | null>(null);
   
   const [filters, setFilters] = useState({
     dateFrom: formatDate(new Date(new Date().setDate(new Date().getDate() - 30))),
@@ -83,9 +88,22 @@ export const GoodsReturnsView: React.FC<GoodsReturnsViewProps> = ({ dataManager,
     if (!noteToConfirm) return;
     try {
       confirmGoodsReturn(noteToConfirm);
+      setNoteToConfirm(null);
     } catch (error: any) {
       alert(`Xatolik: ${error.message}`);
     }
+  };
+
+  const handleToggleExpand = (id: string) => {
+    setExpandedRows(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(id)) {
+            newSet.delete(id);
+        } else {
+            newSet.add(id);
+        }
+        return newSet;
+    });
   };
   
   const getNoteTotal = (items: GoodsReturnItem[]) => items.reduce((sum, item) => sum + item.cost * item.quantity, 0);
@@ -124,6 +142,7 @@ export const GoodsReturnsView: React.FC<GoodsReturnsViewProps> = ({ dataManager,
         <table className="w-full text-sm text-left border-collapse">
           <thead className="text-xs text-slate-500 uppercase bg-slate-50 tracking-wider">
             <tr>
+              <th scope="col" className="px-2 py-3 w-8 border-r border-slate-200"></th>
               <th scope="col" className="px-6 py-3 border-r border-slate-200">Raqam / Sana</th>
               <th scope="col" className="px-6 py-3 border-r border-slate-200">Ta'minotchi</th>
               <th scope="col" className="px-6 py-3 border-r border-slate-200">Ombor</th>
@@ -132,33 +151,97 @@ export const GoodsReturnsView: React.FC<GoodsReturnsViewProps> = ({ dataManager,
               <th scope="col" className="px-6 py-3 text-center">Amallar</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
-            {filteredGoodsReturns.map(note => (
-              <tr key={note.id} className="hover:bg-slate-50">
-                <td className="px-6 py-4 whitespace-nowrap border-r border-slate-200">
-                  <div className="font-medium text-slate-900">{note.doc_number}</div>
-                  <div className="text-xs text-slate-500">{new Date(note.date).toLocaleDateString()}</div>
-                </td>
-                <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{suppliers.find(s => s.id === note.supplier_id)?.name || 'Noma\'lum'}</td>
-                <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{warehouses.find(w => w.id === note.warehouse_id)?.name || 'Noma\'lum'}</td>
-                <td className="px-6 py-4 text-right font-mono border-r border-slate-200">{formatCurrency(getNoteTotal(note.items))}</td>
-                <td className="px-6 py-4 border-r border-slate-200">
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${note.status === DocumentStatus.CONFIRMED ? 'bg-amber-100 text-amber-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                    {note.status === DocumentStatus.CONFIRMED ? 'Tasdiqlangan' : 'Qoralama'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-center">
-                  {note.status === DocumentStatus.DRAFT && (
-                    <div className="flex justify-center items-center gap-2">
-                        <button onClick={() => handleOpenModal(note)} title="Tahrirlash" className="p-2 rounded-full text-amber-600 hover:bg-amber-100 transition-colors"><EditIcon className="h-5 w-5"/></button>
-                        <button onClick={() => handleConfirmClick(note.id)} className="px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-md hover:bg-green-600 transition-colors">Tasdiqlash</button>
+          <tbody>
+            {filteredGoodsReturns.map(note => {
+              const isExpanded = expandedRows.has(note.id);
+              return (
+              <React.Fragment key={note.id}>
+                <tr onClick={() => handleToggleExpand(note.id)} className={`${isExpanded ? 'bg-slate-100' : 'hover:bg-slate-50'} cursor-pointer border-b border-slate-200`}>
+                  <td className="px-2 py-4 text-center border-r border-slate-200">
+                      <ChevronDownIcon className={`h-5 w-5 text-slate-400 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap border-r border-slate-200">
+                    <div className="font-medium text-slate-900">{note.doc_number}</div>
+                    <div className="text-xs text-slate-500">{new Date(note.date).toLocaleDateString()}</div>
+                  </td>
+                  <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{suppliers.find(s => s.id === note.supplier_id)?.name || 'Noma\'lum'}</td>
+                  <td className="px-6 py-4 text-slate-600 border-r border-slate-200">{warehouses.find(w => w.id === note.warehouse_id)?.name || 'Noma\'lum'}</td>
+                  <td className="px-6 py-4 text-right font-mono border-r border-slate-200">{note.status === DocumentStatus.CONFIRMED ? formatCurrency(getNoteTotal(note.items)) : '-'}</td>
+                  <td className="px-6 py-4 border-r border-slate-200">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${note.status === DocumentStatus.CONFIRMED ? 'bg-amber-100 text-amber-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                      {note.status === DocumentStatus.CONFIRMED ? 'Tasdiqlangan' : 'Qoralama'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    {note.status === DocumentStatus.DRAFT ? (
+                      <div className="flex justify-center items-center gap-2">
+                          <button onClick={(e) => { e.stopPropagation(); handleOpenModal(note); }} title="Tahrirlash" className="p-2 rounded-full text-amber-600 hover:bg-amber-100 transition-colors"><EditIcon className="h-5 w-5"/></button>
+                          <button onClick={(e) => { e.stopPropagation(); handleConfirmClick(note.id); }} className="px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-md hover:bg-green-600 transition-colors">Tasdiqlash</button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-500">-</span>
+                    )}
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={7} className="p-0 border-0">
+                    <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                      <div className="overflow-hidden">
+                        <div className="px-8 py-4 bg-slate-100">
+                            <h4 className="text-sm font-semibold text-slate-700 mb-2">Hujjat tarkibi</h4>
+                            {note.items.length > 0 ? (
+                                <table className="w-full text-xs bg-white rounded border-collapse">
+                                    <thead>
+                                        <tr className="border-b">
+                                            <th className="p-2 text-left font-medium border-r border-slate-200">Mahsulot</th>
+                                            <th className="p-2 text-right font-medium border-r border-slate-200">Miqdor</th>
+                                            <th className="p-2 text-right font-medium border-r border-slate-200">Narx (FIFO)</th>
+                                            <th className="p-2 text-right font-medium">Summa</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    {note.items.map((item, index) => {
+                                        const product = products.find(p => p.id === item.productId);
+                                        return (
+                                            <tr key={index} className="border-b last:border-b-0">
+                                                <td className="p-2 border-r border-slate-200">{product?.name || 'Noma\'lum'}</td>
+                                                <td className="p-2 text-right font-mono border-r border-slate-200">{item.quantity.toFixed(2)} {product?.unit}</td>
+                                                <td className="p-2 text-right font-mono border-r border-slate-200">
+                                                    {note.status === DocumentStatus.CONFIRMED ? (
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); setBreakdownModalData({ item, product }); }}
+                                                            disabled={!item.consumedBatches}
+                                                            className="underline decoration-dotted hover:text-amber-600 disabled:no-underline disabled:text-inherit disabled:cursor-default"
+                                                            title="Tannarx shakllanishini ko'rish"
+                                                        >
+                                                            {formatCurrency(item.cost)}
+                                                        </button>
+                                                    ) : '-'}
+                                                </td>
+                                                <td className="p-2 text-right font-mono">{note.status === DocumentStatus.CONFIRMED ? formatCurrency(item.cost * item.quantity) : '-'}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                    </tbody>
+                                     <tfoot className="bg-slate-50 font-semibold">
+                                        <tr>
+                                            <td colSpan={3} className="p-2 text-right border-r border-slate-200">Jami:</td>
+                                            <td className="p-2 text-right font-mono">{note.status === DocumentStatus.CONFIRMED ? formatCurrency(getNoteTotal(note.items)) : '-'}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            ) : (
+                                <p className="text-xs text-slate-500">Hujjatda mahsulotlar yo'q.</p>
+                            )}
+                        </div>
+                      </div>
                     </div>
-                  )}
-                </td>
-              </tr>
-            ))}
+                  </td>
+                </tr>
+              </React.Fragment>
+            )})}
              {filteredGoodsReturns.length === 0 && (
-                <tr><td colSpan={6} className="text-center py-10 text-slate-500">Hujjatlar topilmadi.</td></tr>
+                <tr><td colSpan={7} className="text-center py-10 text-slate-500">Hujjatlar topilmadi.</td></tr>
             )}
           </tbody>
         </table>
@@ -179,6 +262,13 @@ export const GoodsReturnsView: React.FC<GoodsReturnsViewProps> = ({ dataManager,
         title="Qaytarish hujjatini tasdiqlash"
         message={<>Hujjatni tasdiqlamoqchimisiz? <br/> Tasdiqlangan hujjatni o'zgartirib bo'lmaydi va qoldiqlar kamaytiriladi.</>}
         confirmButtonText="Ha, tasdiqlash"
+      />
+      <FifoBreakdownModal
+        isOpen={!!breakdownModalData}
+        onClose={() => setBreakdownModalData(null)}
+        item={breakdownModalData?.item || null}
+        product={breakdownModalData?.product || null}
+        title={`${breakdownModalData?.product?.name || ''} Tannarxining Shakllanishi`}
       />
     </div>
   );

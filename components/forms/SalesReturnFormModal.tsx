@@ -25,7 +25,7 @@ export const SalesReturnFormModal: React.FC<SalesReturnFormModalProps> = ({ isOp
     date: formatDate(new Date()),
     client_id: '',
     warehouse_id: '',
-    reason: SalesReturnReason.RETURN_TO_STOCK,
+    reason: '' as SalesReturnReason,
   });
   const [items, setItems] = useState<SalesReturnItem[]>([]);
 
@@ -48,7 +48,7 @@ export const SalesReturnFormModal: React.FC<SalesReturnFormModalProps> = ({ isOp
         date: formatDate(new Date()),
         client_id: clients.find(c => c.is_active)?.id || '',
         warehouse_id: warehouseToSet || '',
-        reason: SalesReturnReason.RETURN_TO_STOCK,
+        reason: '' as SalesReturnReason,
       });
       setItems([]);
     }
@@ -66,7 +66,6 @@ export const SalesReturnFormModal: React.FC<SalesReturnFormModalProps> = ({ isOp
 
       if (field === 'dishId') {
         const dish = dishes.find(d => d.id === value);
-        newItems[index].dishId = value;
         
         // Find last price for this client and dish
         const lastSale = salesInvoices
@@ -75,6 +74,7 @@ export const SalesReturnFormModal: React.FC<SalesReturnFormModalProps> = ({ isOp
             .filter(i => i.dishId === value)
             .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 
+        newItems[index].dishId = value;
         newItems[index].price = lastSale?.price || dish?.price || 0;
         newItems[index].cost = lastSale?.cost || 0;
 
@@ -95,6 +95,10 @@ export const SalesReturnFormModal: React.FC<SalesReturnFormModalProps> = ({ isOp
   
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.reason) {
+        alert("Iltimos, qaytarish sababini tanlang.");
+        return;
+    }
     const finalItems = items.filter(item => item.dishId && item.quantity > 0);
     if (finalItems.length === 0) {
       alert("Iltimos, qaytarish uchun kamida bitta mahsulot qo'shing.");
@@ -113,7 +117,13 @@ export const SalesReturnFormModal: React.FC<SalesReturnFormModalProps> = ({ isOp
             <div><label className="block text-sm font-medium text-slate-700 mb-1">Sana</label><input type="date" name="date" value={formData.date} onChange={handleHeaderChange} required className="w-full px-3 py-2.5 border rounded-lg" /></div>
             <div><label className="block text-sm font-medium text-slate-700 mb-1">Mijoz</label><select name="client_id" value={formData.client_id} onChange={handleHeaderChange} required className="w-full px-3 py-2.5 border rounded-lg bg-white"><option value="" disabled>Tanlang...</option>{clients.filter(c => c.is_active).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
             <div><label className="block text-sm font-medium text-slate-700 mb-1">Ombor</label><select name="warehouse_id" value={formData.warehouse_id} onChange={handleHeaderChange} required className="w-full px-3 py-2.5 border rounded-lg bg-white"><option value="" disabled>Tanlang...</option>{warehouses.filter(w => w.is_active).map(w => <option key={w.id} value={w.id}>{w.name}</option>)}</select></div>
-            <div><label className="block text-sm font-medium text-slate-700 mb-1">Qaytarish sababi</label><select name="reason" value={formData.reason} onChange={handleHeaderChange} required className="w-full px-3 py-2.5 border rounded-lg bg-white">{Object.values(SalesReturnReason).map(r => <option key={r} value={r}>{r}</option>)}</select></div>
+            <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Qaytarish sababi</label>
+                <select name="reason" value={formData.reason} onChange={handleHeaderChange} required className="w-full px-3 py-2.5 border rounded-lg bg-white">
+                    <option value="" disabled>Sababni tanlang...</option>
+                    {Object.values(SalesReturnReason).map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+            </div>
         </div>
 
         <div className="flex-1 py-4">

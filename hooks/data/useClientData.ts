@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { Client, SalesInvoice, ClientPayment, DocumentStatus, SalesInvoiceItem } from '../../types';
+import { Client, SalesInvoice, ClientPayment, DocumentStatus, SalesInvoiceItem, SalesReturnNote } from '../../types';
 
 interface useClientDataProps {
     initialClients: Client[];
     salesInvoices: SalesInvoice[];
     clientPayments: ClientPayment[];
+    salesReturns: SalesReturnNote[];
     getClientInvoiceTotal: (items: SalesInvoiceItem[]) => number;
 }
 
-export const useClientData = ({ initialClients, salesInvoices, clientPayments, getClientInvoiceTotal }: useClientDataProps) => {
+export const useClientData = ({ initialClients, salesInvoices, clientPayments, salesReturns, getClientInvoiceTotal }: useClientDataProps) => {
     const [clients, setClients] = useState<Client[]>(initialClients);
 
     const addClient = (client: Omit<Client, 'id'>): Client => {
@@ -53,7 +54,14 @@ export const useClientData = ({ initialClients, salesInvoices, clientPayments, g
             return sum;
         }, 0);
 
-        return client.initial_balance + totalInvoices - totalPayments;
+        const totalReturns = salesReturns.reduce((sum, note) => {
+            if (note.client_id === clientId && note.status === DocumentStatus.CONFIRMED) {
+                return sum + note.items.reduce((itemSum, item) => itemSum + item.price * item.quantity, 0);
+            }
+            return sum;
+        }, 0);
+
+        return client.initial_balance + totalInvoices - totalPayments - totalReturns;
     };
 
     return { clients, setClients, addClient, updateClient, deleteClient, canDeleteClient, getClientBalance };

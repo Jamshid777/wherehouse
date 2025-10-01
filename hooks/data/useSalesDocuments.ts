@@ -1,6 +1,6 @@
 // FIX: Import Dispatch and SetStateAction from 'react' to resolve namespace error.
 import { useState, Dispatch, SetStateAction } from 'react';
-import { SalesInvoice, ClientPayment, Stock, Product, Dish, Recipe, DocumentStatus, PaymentMethod, ClientPaymentLink, SalesInvoiceItem } from '../../types';
+import { SalesInvoice, ClientPayment, Stock, Product, Dish, Recipe, DocumentStatus, PaymentMethod, ClientPaymentLink, SalesInvoiceItem, SalesReturnNote, SalesReturnReason } from '../../types';
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('uz-UZ').format(amount);
 
@@ -8,6 +8,7 @@ interface useSalesDocumentsProps {
     initialData: {
         salesInvoices: SalesInvoice[];
         clientPayments: ClientPayment[];
+        salesReturns?: SalesReturnNote[];
     };
     stock: Stock[];
     // FIX: Use imported Dispatch and SetStateAction types instead of React namespace.
@@ -21,6 +22,7 @@ interface useSalesDocumentsProps {
 export const useSalesDocuments = ({ initialData, stock, setStock, products, dishes, recipes, consumeStockByFIFO }: useSalesDocumentsProps) => {
     const [salesInvoices, setSalesInvoices] = useState<SalesInvoice[]>(initialData.salesInvoices);
     const [clientPayments, setClientPayments] = useState<ClientPayment[]>(initialData.clientPayments);
+    const [salesReturns, setSalesReturns] = useState<SalesReturnNote[]>(initialData.salesReturns || []);
 
     const getProduct = (productId: string) => products.find(p => p.id === productId);
     const getTotalStockQuantity = (productId: string, warehouseId: string) => stock.filter(s => s.productId === productId && s.warehouseId === warehouseId).reduce((sum, s) => sum + s.quantity, 0);
@@ -98,9 +100,49 @@ export const useSalesDocuments = ({ initialData, stock, setStock, products, dish
         setSalesInvoices(prev => prev.map(inv => updatesToApply.has(inv.id) ? { ...inv, paid_amount: inv.paid_amount + updatesToApply.get(inv.id)! } : inv));
     };
 
+    // Sales Return Operations
+    const addSalesReturn = (note: Omit<SalesReturnNote, 'id' | 'status' | 'doc_number'>): SalesReturnNote => {
+        const doc_number = `SQ-${(salesReturns.length + 1).toString().padStart(4, '0')}`;
+        const newNote: SalesReturnNote = { ...note, id: `sret${Date.now()}`, status: DocumentStatus.DRAFT, doc_number };
+        setSalesReturns(prev => [newNote, ...prev]);
+        return newNote;
+    };
+    const updateSalesReturn = (updatedNote: SalesReturnNote) => {
+        setSalesReturns(prev => prev.map(n => n.id === updatedNote.id && n.status !== DocumentStatus.CONFIRMED ? updatedNote : n));
+    };
+    const deleteSalesReturn = (noteId: string) => {
+        setSalesReturns(prev => prev.find(n => n.id === noteId)?.status === DocumentStatus.CONFIRMED ? prev : prev.filter(n => n.id !== noteId));
+    };
+    const confirmSalesReturn = (noteId: string) => {
+        const note = salesReturns.find(n => n.id === noteId);
+        if (!note || note.status === DocumentStatus.CONFIRMED) return;
+
+        switch (note.reason) {
+            case SalesReturnReason.RETURN_TO_STOCK:
+                const newStockItems: Stock[] = note.items.map(item => ({
+                    batchId: `sret-${note.id}-${item.dishId}`,
+                    dishId: item.dishId,
+                    warehouseId: note.warehouse_id,
+                    quantity: item.quantity,
+                    cost: item.cost, // Use the cost from the original sale
+                    receiptDate: note.date,
+                }));
+                setStock(prev => [...prev, ...newStockItems]);
+                break;
+            
+            case SalesReturnReason.WRITE_OFF:
+                // No stock change, this is a financial loss. P&L report will handle it.
+                break;
+        }
+
+        setSalesReturns(prev => prev.map(n => n.id === noteId ? { ...n, status: DocumentStatus.CONFIRMED } : n));
+    };
+
+
     return {
         salesInvoices, setSalesInvoices, addSalesInvoice, updateSalesInvoice, deleteSalesInvoice, confirmSalesInvoice, addAndConfirmSalesInvoice, updateAndConfirmSalesInvoice,
         clientPayments, setClientPayments, addClientPayment,
+        salesReturns, setSalesReturns, addSalesReturn, updateSalesReturn, deleteSalesReturn, confirmSalesReturn,
         getClientInvoiceTotal,
     };
 };

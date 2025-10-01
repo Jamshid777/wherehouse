@@ -301,6 +301,32 @@ export interface SalesInvoice {
   payment_method?: PaymentMethod; // Temporary holder for payment on creation
 }
 
+
+export enum SalesReturnReason {
+  RETURN_TO_STOCK = 'Qayta sotuvga (Sifatli)',
+  WRITE_OFF = 'Hisobdan chiqarish (Sifatsiz)',
+}
+
+export interface SalesReturnItem {
+  dishId: string;
+  quantity: number;
+  price: number; // Qaytarish vaqtidagi sotuv narxi (original SalesInvoice'dan olinadi)
+  cost: number; // Qaytarish vaqtidagi tannarx (original SalesInvoice'dan olinadi)
+}
+
+export interface SalesReturnNote {
+  id: string;
+  doc_number: string;
+  client_id: string;
+  warehouse_id: string;
+  date: string; // ISO string format
+  status: DocumentStatus;
+  reason: SalesReturnReason;
+  items: SalesReturnItem[];
+  original_invoice_id?: string; // (Optional) Qaysi sotuv hujjatiga asosan qaytarilayotgani
+}
+
+
 // ===============================================
 // NEW TYPES FOR EXPENSES
 // ===============================================

@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { UseMockDataReturnType } from '../../hooks/useMockData';
-import { DocumentStatus, ClientPayment, SalesInvoice, Dish } from '../../types';
+import { DocumentStatus, ClientPayment, SalesInvoice, Dish, SalesReturnNote } from '../../types';
 import { ChevronDownIcon } from '../icons/ChevronDownIcon';
 
 interface ClientBalanceReportProps {
     dataManager: UseMockDataReturnType;
 }
 
-type DetailItem = (SalesInvoice & {docType: 'invoice'}) | (ClientPayment & {docType: 'payment'});
+type DetailItem = (SalesInvoice & {docType: 'invoice'}) | (ClientPayment & {docType: 'payment'}) | (SalesReturnNote & {docType: 'return'});
 
 interface BalanceData {
     clientId: string;
@@ -21,7 +21,7 @@ const formatCurrency = (amount: number) => new Intl.NumberFormat('uz-UZ').format
 const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
 export const ClientBalanceReport: React.FC<ClientBalanceReportProps> = ({ dataManager }) => {
-    const { clients, salesInvoices, clientPayments, dishes, getClientBalance } = dataManager;
+    const { clients, salesInvoices, clientPayments, salesReturns, dishes, getClientBalance } = dataManager;
     const [reportData, setReportData] = useState<BalanceData[] | null>(null);
     const [asOfDate, setAsOfDate] = useState(formatDate(new Date()));
     const [isLoading, setIsLoading] = useState(false);
@@ -40,9 +40,12 @@ export const ClientBalanceReport: React.FC<ClientBalanceReportProps> = ({ dataMa
             const balance = getClientBalance(c.id); // Note: getClientBalance should be updated to respect asOfDate for a true point-in-time report. For now, we use the live balance.
             const invoices = salesInvoices.filter(n => n.client_id === c.id && n.status === DocumentStatus.CONFIRMED && new Date(n.date) <= targetDate);
             const payments = clientPayments.filter(p => p.client_id === c.id && new Date(p.date) <= targetDate);
+            const returns = salesReturns.filter(r => r.client_id === c.id && r.status === DocumentStatus.CONFIRMED && new Date(r.date) <= targetDate);
+
             const details: DetailItem[] = [
                 ...invoices.map(d => ({...d, docType: 'invoice' as const})),
                 ...payments.map(d => ({...d, docType: 'payment' as const})),
+                ...returns.map(d => ({...d, docType: 'return' as const})),
             ].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
             balanceMap.set(c.id, { clientId: c.id, clientName: c.name, initialBalance: c.initial_balance, balance, details });
         });
@@ -87,11 +90,12 @@ export const ClientBalanceReport: React.FC<ClientBalanceReportProps> = ({ dataMa
                                         <tbody>
                                             <tr className="border-t bg-slate-100"><td colSpan={3} className="p-1.5 font-semibold">Boshlang'ich qoldiq</td><td className="p-1.5 text-right font-mono text-green-700">{d.initialBalance > 0 ? formatCurrency(d.initialBalance) : '-'}</td><td className="p-1.5 text-right font-mono text-red-700">{d.initialBalance < 0 ? formatCurrency(Math.abs(d.initialBalance)) : '-'}</td></tr>
                                             {d.details.map((det, i) => {
-                                                const isExpandable = det.docType === 'invoice';
+                                                const isExpandable = det.docType === 'invoice' || det.docType === 'return';
                                                 const isDocExpanded = isExpandable && expandedDocs.has(det.id);
                                                 let debtAmount = 0, paymentAmount = 0;
                                                 if (det.docType === 'invoice') debtAmount = getInvoiceTotal(det.items);
                                                 else if (det.docType === 'payment') paymentAmount = det.amount;
+                                                else if (det.docType === 'return') paymentAmount = det.items.reduce((s, i) => s + i.price * i.quantity, 0);
                                                 return (
                                                 <React.Fragment key={i}>
                                                     <tr className={`border-t ${isExpandable ? 'cursor-pointer hover:bg-slate-200/50' : ''}`} onClick={() => isExpandable && handleToggleDocExpand(det.id)}>

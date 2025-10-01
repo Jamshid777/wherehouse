@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { UseMockDataReturnType } from '../../hooks/useMockData';
-import { SalesInvoice, DocumentStatus } from '../../types';
+import { SalesInvoice, DocumentStatus, SalesReturnReason } from '../../types';
 import { ChevronDownIcon } from '../icons/ChevronDownIcon';
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('uz-UZ').format(amount);
@@ -11,7 +11,7 @@ interface ProfitAndLossReportProps {
 }
 
 export const ProfitAndLossReport: React.FC<ProfitAndLossReportProps> = ({ dataManager }) => {
-  const { salesInvoices, clients, dishes, expenses, expenseCategories } = dataManager;
+  const { salesInvoices, clients, dishes, expenses, expenseCategories, salesReturns } = dataManager;
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   
   const [filters, setFilters] = useState({
@@ -48,6 +48,11 @@ export const ProfitAndLossReport: React.FC<ProfitAndLossReportProps> = ({ dataMa
       const expDate = new Date(exp.date);
       return expDate >= dateFrom && expDate <= dateTo;
     });
+    
+    const filteredSalesReturns = salesReturns.filter(note => {
+        const noteDate = new Date(note.date);
+        return note.status === DocumentStatus.CONFIRMED && noteDate >= dateFrom && noteDate <= dateTo;
+    });
 
     const expensesByCategory = new Map<string, { categoryName: string, amount: number }>();
     expenseCategories.forEach(cat => {
@@ -62,13 +67,31 @@ export const ProfitAndLossReport: React.FC<ProfitAndLossReportProps> = ({ dataMa
         }
         totalExpenses += exp.amount;
     });
+
+    const writeOffReturnsCost = filteredSalesReturns
+        .filter(r => r.reason === SalesReturnReason.WRITE_OFF)
+        .reduce((sum, r) => sum + r.items.reduce((itemSum, item) => itemSum + item.cost * item.quantity, 0), 0);
+    
+    if (writeOffReturnsCost > 0) {
+        const writeOffCategoryName = "Sotuvdan qaytarilgan yaroqsiz mahsulotlar";
+        // Find if a similar category exists to group it, or just use the name
+        const existingCategory = Array.from(expensesByCategory.values()).find(c => c.categoryName === writeOffCategoryName);
+        if (existingCategory) {
+            existingCategory.amount += writeOffReturnsCost;
+        } else {
+            // Create a temporary category for display
+            expensesByCategory.set('temp_write_off', { categoryName: writeOffCategoryName, amount: writeOffReturnsCost });
+        }
+        totalExpenses += writeOffReturnsCost;
+    }
     
     return {
         invoices: filteredInvoices,
+        salesReturns: filteredSalesReturns,
         expenses: Array.from(expensesByCategory.values()).filter(e => e.amount > 0),
         totalExpenses
     };
-  }, [salesInvoices, expenses, expenseCategories, filters]);
+  }, [salesInvoices, expenses, expenseCategories, salesReturns, filters]);
 
   const handleToggleExpand = (id: string) => {
     setExpandedRows(prev => {
@@ -98,6 +121,14 @@ export const ProfitAndLossReport: React.FC<ProfitAndLossReportProps> = ({ dataMa
         totalRevenue += totals.totalRevenue;
         totalCost += totals.totalCost;
     });
+
+    reportData.salesReturns.forEach(ret => {
+        const returnRevenue = ret.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const returnCost = ret.items.reduce((sum, item) => sum + item.cost * item.quantity, 0);
+        totalRevenue -= returnRevenue;
+        totalCost -= returnCost;
+    });
+
     const grossProfit = totalRevenue - totalCost;
     const netProfit = grossProfit - reportData.totalExpenses;
 
@@ -209,8 +240,8 @@ export const ProfitAndLossReport: React.FC<ProfitAndLossReportProps> = ({ dataMa
             <div className="p-6 bg-amber-50 rounded-xl">
                  <h3 className="text-lg font-semibold text-slate-700 mb-4">Moliyaviy Natija</h3>
                  <div className="space-y-3 text-lg">
-                    <div className="flex justify-between items-center"><span className="text-slate-600">Jami Sotuv:</span><span className="font-mono font-semibold text-slate-800">{formatCurrency(grandTotals.totalRevenue)}</span></div>
-                    <div className="flex justify-between items-center"><span className="text-slate-600">Jami Tannarx:</span><span className="font-mono font-semibold text-slate-800">{formatCurrency(grandTotals.totalCost)}</span></div>
+                    <div className="flex justify-between items-center"><span className="text-slate-600">Jami Sotuv (Qaytarishlar hisobga olingan):</span><span className="font-mono font-semibold text-slate-800">{formatCurrency(grandTotals.totalRevenue)}</span></div>
+                    <div className="flex justify-between items-center"><span className="text-slate-600">Jami Tannarx (Qaytarishlar hisobga olingan):</span><span className="font-mono font-semibold text-slate-800">{formatCurrency(grandTotals.totalCost)}</span></div>
                     <hr/>
                     <div className="flex justify-between items-center text-xl"><span className="font-bold text-slate-700">Yalpi Foyda (Sotuvdan):</span><span className={`font-mono font-bold ${grandTotals.grossProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(grandTotals.grossProfit)}</span></div>
                     <div className="flex justify-between items-center"><span className="text-slate-600">Jami Harajatlar:</span><span className="font-mono font-semibold text-red-600">- {formatCurrency(grandTotals.totalExpenses)}</span></div>

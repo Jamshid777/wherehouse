@@ -12,6 +12,8 @@ import { ProfitIcon } from './icons/ProfitIcon';
 import { ProfitAndLossReport } from './reports/ProfitAndLossReport';
 import { ExpenseIcon } from './icons/ExpenseIcon';
 import { ExpensesView } from './ExpensesView';
+import { SalesReturnIcon } from './icons/SalesReturnIcon';
+import { SalesReturnsView } from './SalesReturnsView';
 
 
 interface SalesHubViewProps {
@@ -20,10 +22,11 @@ interface SalesHubViewProps {
   appMode: 'pro' | 'lite';
 }
 
-type ActiveTab = 'invoices' | 'pnl' | 'expenses' | 'clients' | 'payments' | 'balance';
+type ActiveTab = 'invoices' | 'sales_returns' | 'pnl' | 'expenses' | 'clients' | 'payments' | 'balance';
 
 const tabs = [
     { id: 'invoices', label: 'Sotuv Hujjatlari', icon: SalesIcon },
+    { id: 'sales_returns', label: 'Sotuvdan Qaytarish', icon: SalesReturnIcon },
     { id: 'pnl', label: 'Foyda va Zarar', icon: ProfitIcon },
     { id: 'expenses', label: 'Harajatlar', icon: ExpenseIcon },
     { id: 'clients', label: 'Mijozlar', icon: UsersIcon },
@@ -38,6 +41,8 @@ export const SalesHubView: React.FC<SalesHubViewProps> = (props) => {
     switch (activeTab) {
       case 'invoices':
         return <SalesInvoicesView dataManager={props.dataManager} defaultWarehouseId={props.defaultWarehouseId} />;
+      case 'sales_returns':
+        return <SalesReturnsView dataManager={props.dataManager} defaultWarehouseId={props.defaultWarehouseId} />;
       case 'pnl':
         return <ProfitAndLossReport dataManager={props.dataManager} />;
       case 'expenses':

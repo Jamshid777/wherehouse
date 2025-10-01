@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useMockData } from './hooks/useMockData';
 import { ProductIcon } from './components/icons/ProductIcon';
@@ -18,17 +16,50 @@ import { ActivationModal } from './components/ActivationModal';
 
 
 type View = 'products' | 'suppliers' | 'warehouses' | 'sales';
+type ActivationStatus = 'PENDING' | 'ACTIVE' | 'INACTIVE' | 'EXPIRED';
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>('suppliers');
   const [viewToOpen, setViewToOpen] = useState<{view: View, payload: any} | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [isActivated, setIsActivated] = useState(false); // State for activation
+  const [activationStatus, setActivationStatus] = useState<ActivationStatus>('PENDING');
 
   // Check activation status on mount
   useEffect(() => {
-    const activated = localStorage.getItem('ombor_nazorati_activated_v1') === 'true';
-    setIsActivated(activated);
+    const activationDataString = localStorage.getItem('ombor_nazorati_activation_data_v1');
+    if (!activationDataString) {
+      // Clean up old key if it exists
+      localStorage.removeItem('ombor_nazorati_activated_v1');
+      setActivationStatus('INACTIVE');
+      return;
+    }
+
+    try {
+      const activationData = JSON.parse(activationDataString);
+      const activatedAt = activationData.activatedAt;
+      if (typeof activatedAt !== 'number') {
+        localStorage.removeItem('ombor_nazorati_activation_data_v1');
+        setActivationStatus('INACTIVE');
+        return;
+      }
+      
+      const activationDate = new Date(activatedAt);
+      const expiryDate = new Date(activationDate);
+      expiryDate.setFullYear(expiryDate.getFullYear() + 1); // Add exactly 1 year
+      
+      const now = Date.now(); // Current UTC timestamp, independent of local time
+
+      if (now < expiryDate.getTime()) {
+        setActivationStatus('ACTIVE');
+      } else {
+        localStorage.removeItem('ombor_nazorati_activation_data_v1');
+        setActivationStatus('EXPIRED');
+      }
+    } catch (e) {
+      // Handle corrupted data
+      localStorage.removeItem('ombor_nazorati_activation_data_v1');
+      setActivationStatus('INACTIVE');
+    }
   }, []);
 
   const dataManager = useMockData();
@@ -63,8 +94,11 @@ const App: React.FC = () => {
 
   // Handle successful activation
   const handleActivation = () => {
-    localStorage.setItem('ombor_nazorati_activated_v1', 'true');
-    setIsActivated(true);
+    const activationData = {
+        activatedAt: Date.now() // Store current UTC timestamp
+    };
+    localStorage.setItem('ombor_nazorati_activation_data_v1', JSON.stringify(activationData));
+    setActivationStatus('ACTIVE');
   };
 
 
@@ -100,10 +134,19 @@ const App: React.FC = () => {
         return <SalesHubView dataManager={dataManager} defaultWarehouseId={defaultWarehouseId} appMode={appMode} />;
     }
   };
+
+  // Loading state while checking activation
+  if (activationStatus === 'PENDING') {
+    return (
+      <div className="flex justify-center items-center h-screen bg-gray-50">
+        <div className="text-gray-500">Yuklanmoqda...</div>
+      </div>
+    );
+  }
   
-  // Render ActivationModal if not activated
-  if (!isActivated) {
-    return <ActivationModal onActivate={handleActivation} />;
+  // Render ActivationModal if not activated or expired
+  if (activationStatus !== 'ACTIVE') {
+    return <ActivationModal onActivate={handleActivation} isExpired={activationStatus === 'EXPIRED'} />;
   }
 
 

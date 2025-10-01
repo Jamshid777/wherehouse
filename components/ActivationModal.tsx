@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 
 interface ActivationModalProps {
   onActivate: () => void;
+  isExpired: boolean;
 }
 
-export const ActivationModal: React.FC<ActivationModalProps> = ({ onActivate }) => {
+export const ActivationModal: React.FC<ActivationModalProps> = ({ onActivate, isExpired }) => {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
 
@@ -24,6 +25,11 @@ export const ActivationModal: React.FC<ActivationModalProps> = ({ onActivate }) 
         <div className="p-8 space-y-6">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900">Dasturni Aktivlashtirish</h2>
+            {isExpired && (
+              <p className="mt-3 text-sm text-yellow-800 bg-yellow-100 p-3 rounded-lg border border-yellow-200">
+                Sizning avvalgi aktivatsiya muddatingiz tugadi. Dasturdan foydalanishni davom ettirish uchun, iltimos, qayta aktivlashtiring.
+              </p>
+            )}
             <p className="mt-3 text-sm text-gray-600">
               Dasturni to'liq ishga tushurish uchun aktivatsiya kodini kiritishingiz zarur.
             </p>

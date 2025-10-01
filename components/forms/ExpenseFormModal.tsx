@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Modal } from '../Modal';
 import { Expense } from '../../types';
 import { UseMockDataReturnType } from '../../hooks/useMockData';
@@ -14,13 +14,17 @@ interface ExpenseFormModalProps {
 const formatDate = (dateStr: string) => new Date(dateStr).toISOString().split('T')[0];
 
 export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onClose, onSubmit, expense, dataManager }) => {
-    const { expenseCategories } = dataManager;
+    const { expenseCategories, employees } = dataManager;
     const [formData, setFormData] = useState({
         date: formatDate(new Date().toISOString()),
         categoryId: '',
         amount: 0,
-        comment: ''
+        comment: '',
+        employeeId: ''
     });
+
+    const salaryCategory = useMemo(() => expenseCategories.find(c => c.name === 'Oylik maosh'), [expenseCategories]);
+    const isSalary = salaryCategory && formData.categoryId === salaryCategory.id;
 
     useEffect(() => {
         if (isOpen) {
@@ -29,14 +33,16 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onCl
                     date: formatDate(expense.date),
                     categoryId: expense.categoryId,
                     amount: expense.amount,
-                    comment: expense.comment || ''
+                    comment: expense.comment || '',
+                    employeeId: expense.employeeId || ''
                 });
             } else {
                 setFormData({
                     date: formatDate(new Date().toISOString()),
                     categoryId: expenseCategories[0]?.id || '',
                     amount: 0,
-                    comment: ''
+                    comment: '',
+                    employeeId: ''
                 });
             }
         }
@@ -44,7 +50,13 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onCl
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: name === 'amount' ? parseFloat(value) || 0 : value }));
+        setFormData(prev => {
+            const newState = { ...prev, [name]: name === 'amount' ? parseFloat(value) || 0 : value };
+            if (name === 'categoryId' && salaryCategory && value !== salaryCategory.id) {
+                newState.employeeId = '';
+            }
+            return newState;
+        });
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -53,7 +65,17 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onCl
             alert("Iltimos, kategoriya tanlang va to'g'ri summa kiriting.");
             return;
         }
-        const dataToSubmit = { ...formData, date: new Date(formData.date).toISOString() };
+        if (isSalary && !formData.employeeId) {
+            alert("Iltimos, oylik maosh uchun xodimni tanlang.");
+            return;
+        }
+
+        const dataToSubmit: Omit<Expense, 'id'> = { 
+            ...formData, 
+            date: new Date(formData.date).toISOString(),
+            employeeId: isSalary ? formData.employeeId : undefined
+        };
+        
         if (expense) {
             onSubmit({ ...dataToSubmit, id: expense.id });
         } else {
@@ -75,6 +97,15 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onCl
                         {expenseCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
                     </select>
                 </div>
+                {isSalary && (
+                    <div>
+                        <label htmlFor="employeeId" className="block text-sm font-medium">Xodim</label>
+                        <select id="employeeId" name="employeeId" value={formData.employeeId} onChange={handleChange} required className="w-full mt-1 p-2 border rounded-md bg-white">
+                            <option value="" disabled>Xodimni tanlang...</option>
+                            {employees.filter(e => e.is_active).map(emp => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
+                        </select>
+                    </div>
+                )}
                 <div>
                     <label htmlFor="amount" className="block text-sm font-medium">Summa</label>
                     <input type="number" id="amount" name="amount" value={formData.amount} onChange={handleChange} required min="1" step="any" className="w-full mt-1 p-2 border rounded-md" />

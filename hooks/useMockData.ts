@@ -3,7 +3,8 @@ import {
     Product, Warehouse, Supplier, Stock, GoodsReceiptNote, WriteOffNote, 
     InternalTransferNote, InventoryNote, Payment, GoodsReturnNote, Dish, 
     Recipe, PriceAdjustmentNote, Client, SalesInvoice, ClientPayment, 
-    ExpenseCategory, Expense, DocumentStatus, ProductionNote, SalesReturnNote
+    ExpenseCategory, Expense, DocumentStatus, ProductionNote, SalesReturnNote,
+    Employee
 } from '../types';
 import { useProductData } from './data/useProductData';
 import { useWarehouseData } from './data/useWarehouseData';
@@ -15,6 +16,7 @@ import { useStockData } from './data/useStockData';
 import { useSupplierDocuments } from './data/useSupplierDocuments';
 import { useInternalDocuments } from './data/useInternalDocuments';
 import { useSalesDocuments } from './data/useSalesDocuments';
+import { useEmployeeData } from './data/useEmployeeData';
 
 // Define the structure for stored data
 interface AppData {
@@ -37,6 +39,7 @@ interface AppData {
     salesReturns: SalesReturnNote[];
     expenseCategories: ExpenseCategory[];
     expenses: Expense[];
+    employees: Employee[];
     productionNotes: ProductionNote[];
 }
 
@@ -116,6 +119,10 @@ const getDefaultData = (): AppData => ({
         { id: 'ec5', name: 'Boshqa harajatlar' },
     ],
     expenses: [],
+    employees: [
+        { id: 'emp1', name: 'Ali Valiyev', is_active: true },
+        { id: 'emp2', name: 'Vali Aliyev', is_active: true },
+    ],
     productionNotes: [],
 });
 
@@ -160,6 +167,7 @@ export const useMockData = () => {
   const { suppliers, setSuppliers, ...supplierOps } = useSupplierData({ initialSuppliers: initialData.suppliers, goodsReceipts, payments, goodsReturns, priceAdjustments, suppliers: initialData.suppliers, getNoteTotal: supplierDocOps.getNoteTotal });
   const { clients, setClients, ...clientOps } = useClientData({ initialClients: initialData.clients, salesInvoices, clientPayments, salesReturns, getClientInvoiceTotal: salesDocOps.getClientInvoiceTotal });
   const { expenseCategories, setExpenseCategories, expenses, setExpenses, ...expenseOps } = useExpenseData(initialData.expenseCategories, initialData.expenses);
+  const { employees, setEmployees, ...employeeOps } = useEmployeeData({ initialEmployees: initialData.employees, expenses });
   
     const getStockAsOf = (targetDateStr: string): Stock[] => {
         const targetDate = new Date(targetDateStr);
@@ -306,7 +314,7 @@ export const useMockData = () => {
             products, warehouses, suppliers, stock, goodsReceipts, writeOffs, 
             internalTransfers, inventoryNotes, payments, goodsReturns, priceAdjustments,
             dishes, recipes, clients, salesInvoices, clientPayments, salesReturns, expenseCategories, expenses,
-            productionNotes,
+            employees, productionNotes,
         };
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(appData));
     } catch (error) {
@@ -315,7 +323,7 @@ export const useMockData = () => {
   }, [
     products, warehouses, suppliers, stock, goodsReceipts, writeOffs, 
     internalTransfers, inventoryNotes, payments, goodsReturns, priceAdjustments, dishes, recipes,
-    clients, salesInvoices, clientPayments, salesReturns, expenseCategories, expenses, productionNotes
+    clients, salesInvoices, clientPayments, salesReturns, expenseCategories, expenses, employees, productionNotes
   ]);
 
   return {
@@ -339,6 +347,7 @@ export const useMockData = () => {
     salesReturns,
     expenseCategories,
     expenses,
+    employees,
     productionNotes,
 
     // Operations
@@ -348,6 +357,7 @@ export const useMockData = () => {
     ...clientOps,
     ...dishOps,
     ...expenseOps,
+    ...employeeOps,
     ...stockOps,
     ...supplierDocOps,
     ...internalDocOps,

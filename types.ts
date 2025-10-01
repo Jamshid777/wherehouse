@@ -336,10 +336,17 @@ export interface ExpenseCategory {
   name: string;
 }
 
+export interface Employee {
+  id: string;
+  name: string;
+  is_active: boolean;
+}
+
 export interface Expense {
   id: string;
   date: string; // ISO string format
   categoryId: string;
   amount: number;
   comment?: string;
+  employeeId?: string;
 }

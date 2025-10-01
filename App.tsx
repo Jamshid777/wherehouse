@@ -1,5 +1,6 @@
 
-import React, { useState, useMemo } from 'react';
+
+import React, { useState, useMemo, useEffect } from 'react';
 import { useMockData } from './hooks/useMockData';
 import { ProductIcon } from './components/icons/ProductIcon';
 import { SupplierIcon } from './components/icons/SupplierIcon';
@@ -13,6 +14,7 @@ import { WarehousesHubView } from './components/WarehousesHubView';
 import { WarehouseIcon } from './components/icons/WarehouseIcon';
 import { SalesIcon } from './components/icons/SalesIcon';
 import { SalesHubView } from './components/SalesHubView';
+import { ActivationModal } from './components/ActivationModal';
 
 
 type View = 'products' | 'suppliers' | 'warehouses' | 'sales';
@@ -21,6 +23,13 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>('suppliers');
   const [viewToOpen, setViewToOpen] = useState<{view: View, payload: any} | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isActivated, setIsActivated] = useState(false); // State for activation
+
+  // Check activation status on mount
+  useEffect(() => {
+    const activated = localStorage.getItem('ombor_nazorati_activated_v1') === 'true';
+    setIsActivated(activated);
+  }, []);
 
   const dataManager = useMockData();
   const { defaultWarehouseId, setDefaultWarehouseId, appMode, setAppMode } = useSettings();
@@ -51,6 +60,12 @@ const App: React.FC = () => {
         setViewToOpen(null);
     }
   }
+
+  // Handle successful activation
+  const handleActivation = () => {
+    localStorage.setItem('ombor_nazorati_activated_v1', 'true');
+    setIsActivated(true);
+  };
 
 
   const renderContent = () => {
@@ -85,6 +100,12 @@ const App: React.FC = () => {
         return <SalesHubView dataManager={dataManager} defaultWarehouseId={defaultWarehouseId} appMode={appMode} />;
     }
   };
+  
+  // Render ActivationModal if not activated
+  if (!isActivated) {
+    return <ActivationModal onActivate={handleActivation} />;
+  }
+
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 font-sans text-gray-800">

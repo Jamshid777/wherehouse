@@ -4,7 +4,8 @@ import {
     InternalTransferNote, InventoryNote, Payment, GoodsReturnNote, Dish, 
     Recipe, PriceAdjustmentNote, Client, SalesInvoice, ClientPayment, 
     ExpenseCategory, Expense, DocumentStatus, ProductionNote, SalesReturnNote,
-    Employee
+    Employee,
+    SalesReturnReason
 } from '../types';
 import { useProductData } from './data/useProductData';
 import { useWarehouseData } from './data/useWarehouseData';
@@ -181,9 +182,20 @@ export const useMockData = () => {
             ...priceAdjustments.map(d => ({ ...d, docType: 'price_adjustment', date: new Date(d.date) })),
             ...productionNotes.map(d => ({ ...d, docType: 'production', date: new Date(d.date) })),
             ...salesInvoices.map(d => ({ ...d, docType: 'sales', date: new Date(d.date) })),
+            ...salesReturns.map(d => ({ ...d, docType: 'sales_return', date: new Date(d.date) })),
         ]
         .filter(d => d.status === DocumentStatus.CONFIRMED && new Date(d.date) <= targetDate)
-        .sort((a, b) => a.date.getTime() - b.date.getTime());
+        .sort((a, b) => {
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            if (dateA !== dateB) {
+                return dateA - dateB;
+            }
+            // If dates are the same, sort by ID timestamp to maintain chronological order of creation
+            const idA = parseInt(a.id.match(/\d+$/)?.[0] || '0', 10);
+            const idB = parseInt(b.id.match(/\d+$/)?.[0] || '0', 10);
+            return idA - idB;
+        });
         
         let historicalStock: Stock[] = [];
 
@@ -236,6 +248,21 @@ export const useMockData = () => {
                         }
                     });
                     historicalStock = historicalStock.filter(s => s.quantity > 0.001);
+                    break;
+
+                case 'sales_return':
+                    if (doc.reason === SalesReturnReason.RETURN_TO_STOCK) {
+                        doc.items.forEach((item: any) => {
+                            historicalStock.push({
+                                batchId: `sret-${doc.id}-${item.dishId}`,
+                                dishId: item.dishId,
+                                warehouseId: doc.warehouse_id,
+                                quantity: item.quantity,
+                                cost: item.cost,
+                                receiptDate: doc.date.toISOString(),
+                            });
+                        });
+                    }
                     break;
 
                 case 'production':

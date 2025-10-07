@@ -292,7 +292,14 @@ export const StockOverviewReport: React.FC<StockOverviewReportProps> = ({ dataMa
                                                     </td>
                                                     <td className="px-6 py-4 text-right font-mono font-bold text-slate-800 border-r border-slate-200">{formatCurrency(totalValue)}</td>
                                                     <td className="px-6 py-4 text-center">
-                                                        {item.type === 'product' && <button onClick={(e) => { e.stopPropagation(); handleQuickReceipt(item as Product); }} title="Tezkor kirim" className="p-1.5 rounded-full text-amber-600 hover:bg-amber-100 transition-colors"><PlusIcon className="h-5 w-5" /></button>}
+                                                        {/* FIX: The 'item' is of type 'StockableItem' which is not assignable to 'Product'. Find the full product object from the data manager before passing it. */}
+                                                        {item.type === 'product' && <button onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const productToPass = dataManager.products.find(p => p.id === item.id);
+                                                            if (productToPass) {
+                                                                handleQuickReceipt(productToPass);
+                                                            }
+                                                        }} title="Tezkor kirim" className="p-1.5 rounded-full text-amber-600 hover:bg-amber-100 transition-colors"><PlusIcon className="h-5 w-5" /></button>}
                                                     </td>
                                                 </tr>
                                                 {appMode === 'pro' && (

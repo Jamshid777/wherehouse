@@ -70,14 +70,87 @@ export const useSalesDocuments = ({ initialData, stock, setStock, products, dish
     };
     
     const addAndConfirmSalesInvoice = (noteData: Omit<SalesInvoice, 'id' | 'status' | 'doc_number'>) => {
-        const confirmedNote = addSalesInvoice(noteData);
-        confirmSalesInvoice(confirmedNote.id);
-        return salesInvoices.find(inv => inv.id === confirmedNote.id)!;
+        const doc_number = `S-${(salesInvoices.length + 1).toString().padStart(4, '0')}`;
+        const newNoteId = `si${Date.now()}`;
+    
+        if (noteData.paid_amount > 0) {
+            const newPayment: ClientPayment = {
+                id: `cpay${Date.now()}`,
+                doc_number: `CP-${(clientPayments.length + 1).toString().padStart(4, '0')}`,
+                date: noteData.date,
+                client_id: noteData.client_id,
+                amount: noteData.paid_amount,
+                payment_method: noteData.payment_method || PaymentMethod.CASH,
+                links: [{ invoiceId: newNoteId, amountApplied: noteData.paid_amount }],
+                comment: `"${doc_number}" hujjat uchun dastlabki to'lov`
+            };
+            setClientPayments(prev => [newPayment, ...prev]);
+        }
+
+        let tempStock = JSON.parse(JSON.stringify(stock));
+        const finalInvoiceItems: SalesInvoiceItem[] = [];
+
+        for (const item of noteData.items) {
+            const { updatedStock, consumedCost } = consumeStockByFIFO(
+                { dishId: item.dishId },
+                noteData.warehouse_id,
+                item.quantity,
+                tempStock
+            );
+            tempStock = updatedStock;
+            finalInvoiceItems.push({ ...item, cost: consumedCost });
+        }
+
+        const finalConfirmedNote: SalesInvoice = {
+            ...noteData,
+            id: newNoteId,
+            doc_number,
+            items: finalInvoiceItems,
+            status: DocumentStatus.CONFIRMED
+        };
+
+        setStock(tempStock);
+        setSalesInvoices(prev => [finalConfirmedNote, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     };
 
     const updateAndConfirmSalesInvoice = (updatedNote: SalesInvoice) => {
-        updateSalesInvoice(updatedNote);
-        confirmSalesInvoice(updatedNote.id);
+        const noteIndex = salesInvoices.findIndex(n => n.id === updatedNote.id);
+        if (noteIndex === -1 || salesInvoices[noteIndex].status === DocumentStatus.CONFIRMED) {
+            throw new Error("Hujjat topilmadi yoki allaqachon tasdiqlangan.");
+        }
+
+        if (updatedNote.paid_amount > 0) {
+             const newPayment: ClientPayment = {
+                id: `cpay${Date.now()}`,
+                doc_number: `CP-${(clientPayments.length + 1).toString().padStart(4, '0')}`,
+                date: updatedNote.date,
+                client_id: updatedNote.client_id,
+                amount: updatedNote.paid_amount,
+                payment_method: updatedNote.payment_method || PaymentMethod.CASH,
+                links: [{ invoiceId: updatedNote.id, amountApplied: updatedNote.paid_amount }],
+                comment: `"${updatedNote.doc_number}" hujjat uchun dastlabki to'lov`
+            };
+            setClientPayments(prev => [newPayment, ...prev]);
+        }
+
+        let tempStock = JSON.parse(JSON.stringify(stock));
+        const finalInvoiceItems: SalesInvoiceItem[] = [];
+
+        for (const item of updatedNote.items) {
+            const { updatedStock, consumedCost } = consumeStockByFIFO(
+                { dishId: item.dishId },
+                updatedNote.warehouse_id,
+                item.quantity,
+                tempStock
+            );
+            tempStock = updatedStock;
+            finalInvoiceItems.push({ ...item, cost: consumedCost });
+        }
+
+        const finalConfirmedNote: SalesInvoice = { ...updatedNote, items: finalInvoiceItems, status: DocumentStatus.CONFIRMED };
+
+        setStock(tempStock);
+        setSalesInvoices(prev => prev.map(n => n.id === finalConfirmedNote.id ? finalConfirmedNote : n));
     };
 
     const addClientPayment = (paymentData: Omit<ClientPayment, 'id' | 'doc_number' | 'links'>) => {

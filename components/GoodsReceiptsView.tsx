@@ -544,7 +544,7 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
   defaultWarehouseId,
   appMode,
 }) => {
-  const { products, warehouses, suppliers, addProduct, updateProduct, addSupplier, updateSupplier, isInnUnique, addWarehouse, updateWarehouse, getNextBatchNumber } = dataManager;
+  const { products, warehouses, suppliers, addProduct, updateProduct, addSupplier, updateSupplier, isInnUnique, addWarehouse, updateWarehouse, getNextBatchNumber, goodsReceipts } = dataManager;
   
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -567,6 +567,13 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
         label: `${p.name} (${p.unit})`
     }));
   }, [products]);
+
+  const formatNumberWithSpaces = (num: number): string => {
+    if (num === null || num === undefined) return '';
+    const parts = num.toString().split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return parts.join('.');
+  };
 
   useEffect(() => {
     if (!isOpen) {
@@ -599,7 +606,7 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
         
         const newItem: GoodsReceiptItem = {
             productId: productForNewNote ? productForNewNote.id : '',
-            quantity: 1,
+            quantity: 0,
             price: 0,
             batchId: startBatchNum.toString(),
             validDate: formatDate(validDate)
@@ -617,7 +624,7 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'paid_amount' ? parseFloat(value) || 0 : value,
+      [name]: name === 'paid_amount' ? parseFloat(value.replace(/\s/g, '')) || 0 : value,
     }));
   };
 
@@ -630,10 +637,27 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
         
         if (field === 'productId') {
             (currentItem as any)[field] = value;
+            if (value) {
+                const confirmedReceipts = goodsReceipts
+                    .filter(note => note.status === DocumentStatus.CONFIRMED)
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+                let lastPrice = 0;
+                for (const receipt of confirmedReceipts) {
+                    const item = receipt.items.find(i => i.productId === value);
+                    if (item) {
+                        lastPrice = item.price;
+                        break;
+                    }
+                }
+                currentItem.price = lastPrice;
+            } else {
+                currentItem.price = 0;
+            }
         } else if (field === 'validDate') {
             (currentItem as any)[field] = value;
         } else {
-            (currentItem as any)[field] = parseFloat(value) || 0;
+            (currentItem as any)[field] = parseFloat(String(value).replace(/\s/g, '')) || 0;
         }
 
         // Auto-add new row logic
@@ -646,7 +670,7 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
             validDate.setMonth(validDate.getMonth() + 6);
             newItems.push({
                 productId: '',
-                quantity: 1,
+                quantity: 0,
                 price: 0,
                 batchId: (maxBatchInForm + 1).toString(),
                 validDate: formatDate(validDate)
@@ -854,8 +878,36 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                           </button>
                       </div>
                     </td>
-                    <td className="p-1"><input type="number" value={item.quantity} onChange={e => handleItemChange(index, 'quantity', e.target.value)} min="0.01" step="any" className="w-full px-3 py-2 border border-slate-300 rounded-md" required /></td>
-                    <td className="p-1"><input type="number" value={item.price} onChange={e => handleItemChange(index, 'price', e.target.value)} min="0" step="any" className="w-full px-3 py-2 border border-slate-300 rounded-md" required /></td>
+                    <td className="p-1">
+                        <input 
+                            type="text" 
+                            value={item.quantity === 0 ? '' : formatNumberWithSpaces(item.quantity)} 
+                            onChange={e => {
+                                const cleanedValue = e.target.value.replace(/\s/g, '');
+                                if (/^\d*\.?\d*$/.test(cleanedValue) || cleanedValue === '') {
+                                    handleItemChange(index, 'quantity', cleanedValue);
+                                }
+                            }}
+                            placeholder="0"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-md text-right" 
+                            required 
+                        />
+                    </td>
+                    <td className="p-1">
+                        <input 
+                            type="text" 
+                            value={item.price === 0 ? '' : formatNumberWithSpaces(item.price)}
+                            onChange={e => {
+                                const cleanedValue = e.target.value.replace(/\s/g, '');
+                                if (/^\d*\.?\d*$/.test(cleanedValue) || cleanedValue === '') {
+                                    handleItemChange(index, 'price', cleanedValue);
+                                }
+                            }}
+                            placeholder="0"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-md text-right" 
+                            required 
+                        />
+                    </td>
                     {appMode === 'pro' && <td className="p-1"><input type="date" value={item.validDate} onChange={e => handleItemChange(index, 'validDate', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md" required /></td>}
                     <td className="p-1 font-mono">{formatCurrency(item.quantity * item.price)}</td>
                     <td className="p-1 text-center">
@@ -873,7 +925,22 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                 <div className="flex items-center gap-4 flex-wrap">
                     <div className="flex items-center gap-2">
                         <label htmlFor="paid_amount" className="text-sm font-medium text-slate-700">Oldindan to'lov:</label>
-                        <input type="number" id="paid_amount" name="paid_amount" value={formData.paid_amount} onChange={handleHeaderChange} min="0" step="any" className="w-40 px-3 py-2 border border-slate-300 rounded-md"/>
+                        <input
+                            type="text"
+                            id="paid_amount"
+                            name="paid_amount"
+                            value={formData.paid_amount === 0 ? '' : formatNumberWithSpaces(formData.paid_amount)}
+                            onChange={e => {
+                                const cleanedValue = e.target.value.replace(/\s/g, '');
+                                if (/^\d*\.?\d*$/.test(cleanedValue) || cleanedValue === '') {
+                                    handleHeaderChange({
+                                        target: { name: 'paid_amount', value: cleanedValue }
+                                    } as React.ChangeEvent<HTMLInputElement>);
+                                }
+                            }}
+                            placeholder="0"
+                            className="w-40 px-3 py-2 border border-slate-300 rounded-md text-right"
+                        />
                     </div>
                     {formData.paid_amount > 0 && (
                          <div className="flex items-center gap-2">

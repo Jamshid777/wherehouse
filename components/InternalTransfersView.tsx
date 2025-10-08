@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { InternalTransferNote, InternalTransferItem, DocumentStatus, Stock } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
@@ -319,10 +320,8 @@ const InternalTransferFormModal: React.FC<InternalTransferFormModalProps> = ({is
         } else {
             setError('');
         }
-        if (!note) {
-            setItems([]);
-        }
-    }, [formData.from_warehouse_id, formData.to_warehouse_id, note]);
+    }, [formData.from_warehouse_id, formData.to_warehouse_id]);
+
 
     const handleHeaderChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));

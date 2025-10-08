@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { WriteOffNote, WriteOffItem, DocumentStatus, WriteOffReason, Stock, Product } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
@@ -360,10 +361,15 @@ const WriteOffFormModal: React.FC<WriteOffFormModalProps> = ({isOpen, onClose, o
     }, [isOpen, note, warehouses, defaultWarehouseId, stock]);
 
     useEffect(() => {
-        if (!note) {
-            setItems([]);
+        if (!note && items.length > 0) {
+            const newItems = items.map(item => {
+                const productInfo = productsInStock.find(p => p.id === item.productId);
+                return { ...item, availableQty: productInfo?.totalQuantity || 0, quantity: Math.min(item.quantity, productInfo?.totalQuantity || 0) };
+            }).filter(item => item.productId); // Keep only items that still have a product ID
+            setItems(newItems);
         }
-    }, [formData.warehouse_id, note]);
+    }, [formData.warehouse_id]);
+
 
     const handleHeaderChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));

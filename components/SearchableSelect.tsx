@@ -1,7 +1,9 @@
 
+
 import React, { useState, useEffect, useRef, useMemo, forwardRef } from 'react';
 import { ChevronDownIcon } from './icons/ChevronDownIcon';
 import { PlusIcon } from './icons/PlusIcon';
+import { EditIcon } from './icons/EditIcon';
 
 export interface SearchableOption {
     value: string;
@@ -13,6 +15,7 @@ interface SearchableSelectProps {
     value: string;
     onChange: (value: string | null) => void;
     onAddNew?: () => void;
+    onEditItem?: (value: string) => void;
     placeholder?: string;
     addNewLabel?: string;
 }
@@ -22,6 +25,7 @@ export const SearchableSelect = forwardRef<HTMLInputElement, SearchableSelectPro
     value,
     onChange,
     onAddNew,
+    onEditItem,
     placeholder = 'Tanlang...',
     addNewLabel = 'Yangi qo\'shish'
 }, ref) => {
@@ -138,11 +142,25 @@ export const SearchableSelect = forwardRef<HTMLInputElement, SearchableSelectPro
                     {filteredOptions.map((option, index) => (
                         <li
                             key={option.value}
-                            className={`px-3 py-2 cursor-pointer hover:bg-amber-50 ${highlightedIndex === index ? 'bg-amber-100' : ''} ${value === option.value ? 'font-semibold bg-slate-100' : ''}`}
+                            className={`flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-amber-50 ${highlightedIndex === index ? 'bg-amber-100' : ''} ${value === option.value ? 'font-semibold bg-slate-100' : ''}`}
                             onClick={() => handleSelectOption(option.value)}
                             onMouseEnter={() => setHighlightedIndex(index)}
                         >
-                            {option.label}
+                            <span className="truncate">{option.label}</span>
+                            {onEditItem && (
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onEditItem(option.value);
+                                        setIsOpen(false);
+                                    }}
+                                    className="p-1 rounded-full text-slate-500 hover:bg-slate-200 ml-2 flex-shrink-0"
+                                    title="Tahrirlash"
+                                >
+                                    <EditIcon className="h-4 w-4" />
+                                </button>
+                            )}
                         </li>
                     ))}
                     {onAddNew && (

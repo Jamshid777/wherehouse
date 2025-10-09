@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { GoodsReceiptNote, GoodsReceiptItem, DocumentStatus, PaymentStatus, Product, Supplier, PaymentMethod, Warehouse } from '../types';
 import { UseMockDataReturnType } from '../hooks/useMockData';
@@ -559,7 +558,7 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
   const [supplierModalState, setSupplierModalState] = useState<{isOpen: boolean, supplier: Supplier | null}>({isOpen: false, supplier: null});
   const [warehouseModalState, setWarehouseModalState] = useState<{isOpen: boolean, warehouse: Warehouse | null}>({isOpen: false, warehouse: null});
 
-  const firstProductInputRef = useRef<HTMLInputElement>(null);
+  const productInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const productOptions = useMemo(() => {
     return products.map(p => ({
@@ -575,10 +574,33 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
     return parts.join('.');
   };
 
+  const addEmptyRowIfNeeded = (currentItems: GoodsReceiptItem[]) => {
+    const lastItem = currentItems[currentItems.length - 1];
+    if (currentItems.length === 0 || (lastItem && lastItem.productId)) {
+        const maxBatchInForm = currentItems.reduce((max, item) => {
+            const num = parseInt(item.batchId, 10);
+            return !isNaN(num) && num > max ? num : max;
+        }, 0);
+        const validDate = new Date();
+        validDate.setMonth(validDate.getMonth() + 6);
+        const newItem: GoodsReceiptItem = {
+            productId: '',
+            quantity: 0,
+            price: 0,
+            batchId: (maxBatchInForm + 1).toString(),
+            validDate: formatDate(validDate)
+        };
+        return [...currentItems, newItem];
+    }
+    return currentItems;
+  };
+
   useEffect(() => {
     if (!isOpen) {
         return;
     }
+    
+    productInputRefs.current = [];
 
     if (note) { // Editing mode
         setFormData({
@@ -588,7 +610,7 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
             paid_amount: note.paid_amount,
             payment_method: note.payment_method || PaymentMethod.CASH
         });
-        setItems(note.items.map(item => ({...item})));
+        setItems(addEmptyRowIfNeeded(note.items.map(item => ({...item}))));
     } else { // New note mode
         const startBatchNum = getNextBatchNumber();
         const defaultDate = new Date();
@@ -604,20 +626,23 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
             payment_method: PaymentMethod.CASH
         });
         
-        const newItem: GoodsReceiptItem = {
-            productId: productForNewNote ? productForNewNote.id : '',
-            quantity: 0,
-            price: 0,
-            batchId: startBatchNum.toString(),
-            validDate: formatDate(validDate)
-        };
-        setItems([newItem]);
+        let initialItems: GoodsReceiptItem[] = [];
+        if (productForNewNote) {
+            initialItems.push({
+                productId: productForNewNote.id,
+                quantity: 0,
+                price: 0,
+                batchId: startBatchNum.toString(),
+                validDate: formatDate(validDate)
+            });
+        }
+        
+        setItems(addEmptyRowIfNeeded(initialItems));
 
         setTimeout(() => {
-            firstProductInputRef.current?.focus();
+            productInputRefs.current[0]?.focus();
         }, 100);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, note, productForNewNote]);
 
   const handleHeaderChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -659,30 +684,28 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
         } else {
             (currentItem as any)[field] = parseFloat(String(value).replace(/\s/g, '')) || 0;
         }
-
-        // Auto-add new row logic
-        if (field === 'productId' && value && index === prevItems.length - 1) {
-            const maxBatchInForm = newItems.reduce((max, item) => {
-                const num = parseInt(item.batchId, 10);
-                return !isNaN(num) && num > max ? num : max;
-            }, 0);
-            const validDate = new Date();
-            validDate.setMonth(validDate.getMonth() + 6);
-            newItems.push({
-                productId: '',
-                quantity: 0,
-                price: 0,
-                batchId: (maxBatchInForm + 1).toString(),
-                validDate: formatDate(validDate)
-            });
-        }
         
-        return newItems;
+        return addEmptyRowIfNeeded(newItems);
     });
   };
+  
+  const handlePriceKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        // If there's a next row, focus its product input.
+        if (index < items.length - 1) {
+            productInputRefs.current[index + 1]?.focus();
+        }
+    }
+  };
+
 
   const handleRemoveItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
+    setItems(prevItems => {
+        const newItems = prevItems.filter((_, i) => i !== index);
+        // Ensure there's at least one (potentially empty) row.
+        return addEmptyRowIfNeeded(newItems);
+    });
   };
   
   const handleFormSubmit = (e: React.FormEvent, action: 'save' | 'save_and_confirm' = 'save') => {
@@ -698,7 +721,7 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
         return;
     }
     
-    // Filter out incomplete items. This will ignore the empty row that's auto-added.
+    // Filter out incomplete items. This will ignore the empty row.
     const finalItems = items.filter(item => item.productId && item.quantity > 0).map(item => {
         if (appMode === 'lite' && !item.validDate) {
             const validDate = new Date();
@@ -766,14 +789,12 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
     setWarehouseModalState({isOpen: false, warehouse: null});
   };
 
-  const handleEditProductClick = (index: number) => {
-    const item = items[index];
-    if (!item.productId) return;
-    const productToEdit = products.find(p => p.id === item.productId);
+  const handleEditProductFromDropdown = (productIdToEdit: string) => {
+    const productToEdit = products.find(p => p.id === productIdToEdit);
     if (productToEdit) {
-        setProductModalState({ isOpen: true, product: productToEdit, index });
+        setProductModalState({ isOpen: true, product: productToEdit, index: null });
     }
-  }
+  };
 
   return (
     <>
@@ -852,31 +873,20 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                 {items.map((item, index) => (
                   <tr key={index} className="border-b">
                     <td className="p-1">
-                      <div className="flex items-center gap-1">
-                          <div className="flex-grow">
-                              <SearchableSelect
-                                  ref={index === 0 ? firstProductInputRef : undefined}
-                                  options={productOptions}
-                                  value={item.productId}
-                                  onChange={(value) => {
-                                      if (value !== null) {
-                                          handleItemChange(index, 'productId', value);
-                                      }
-                                  }}
-                                  onAddNew={() => setProductModalState({ isOpen: true, product: null, index })}
-                                  placeholder="Mahsulotni qidiring..."
-                                  addNewLabel="... Yangi mahsulot qo'shish"
-                              />
-                          </div>
-                          <button 
-                              type="button" 
-                              onClick={() => handleEditProductClick(index)} 
-                              disabled={!item.productId}
-                              title="Tahrirlash"
-                              className="p-2 bg-slate-100 rounded-md hover:bg-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                              <EditIcon className="h-5 w-5"/>
-                          </button>
-                      </div>
+                        <SearchableSelect
+                            ref={el => productInputRefs.current[index] = el}
+                            options={productOptions}
+                            value={item.productId}
+                            onChange={(value) => {
+                                if (value !== null) {
+                                    handleItemChange(index, 'productId', value);
+                                }
+                            }}
+                            onAddNew={() => setProductModalState({ isOpen: true, product: null, index })}
+                            onEditItem={handleEditProductFromDropdown}
+                            placeholder="Mahsulotni qidiring..."
+                            addNewLabel="... Yangi mahsulot qo'shish"
+                        />
                     </td>
                     <td className="p-1">
                         <input 
@@ -890,7 +900,7 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                             }}
                             placeholder="0"
                             className="w-full px-3 py-2 border border-slate-300 rounded-md text-right" 
-                            required 
+                             
                         />
                     </td>
                     <td className="p-1">
@@ -903,13 +913,14 @@ const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                                     handleItemChange(index, 'price', cleanedValue);
                                 }
                             }}
+                            onKeyDown={e => handlePriceKeyDown(e, index)}
                             placeholder="0"
                             className="w-full px-3 py-2 border border-slate-300 rounded-md text-right" 
-                            required 
+                             
                         />
                     </td>
                     {appMode === 'pro' && <td className="p-1"><input type="date" value={item.validDate} onChange={e => handleItemChange(index, 'validDate', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md" required /></td>}
-                    <td className="p-1 font-mono">{formatCurrency(item.quantity * item.price)}</td>
+                    <td className="p-1 font-mono text-right">{formatCurrency(item.quantity * item.price)}</td>
                     <td className="p-1 text-center">
                       <button type="button" onClick={() => handleRemoveItem(index)} className="text-red-500 hover:text-red-700 p-2"><TrashIcon className="h-5 w-5"/></button>
                     </td>
